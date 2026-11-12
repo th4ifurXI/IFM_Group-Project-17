@@ -49,6 +49,9 @@ Exchange rates are MYR per 1 unit of foreign currency; rates are annual decimals
 | 1 | i_MY 3%, i_f 4%, inflation MY 2%, abroad 3% | PV later RM114,873.79, PV now RM114,884.62, **Either** |
 | 2 | Malaysian inflation rises to 4% | Saving from converting now RM2,241.60, real MYR rate -0.96%, **Convert now** |
 | 3 | Inflation 4% and i_MY 5.01% (Fisher holds) | **Either** |
+| 4 | From Scenario 1, i_MY rises to 5% | PV later RM112,685.71, saving from converting later RM2,198.90, real MYR rate 2.94%, **Convert later** |
+
+Rule of thumb: the verdict follows the Fisher real-rate gap. A higher real rate abroad means convert now; a higher real rate in Malaysia means convert later.
 
 ## Project structure
 
