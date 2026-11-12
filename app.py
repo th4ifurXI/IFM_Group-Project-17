@@ -13,6 +13,7 @@ import plotly.graph_objects as go
 import streamlit as st
 from plotly.subplots import make_subplots
 
+import coach
 import finance
 from finance import Inputs
 from scenarios import (DESTINATIONS, ILLUSTRATIVE_LABEL, PRESETS, SCENARIO_1,
@@ -423,9 +424,91 @@ with tab_sens:
 
 # ---------- Tab 4: AI Coach ----------
 
+SUGGESTED_QUESTIONS = [
+    "Should I convert now or later?",
+    "Explain PPP with my numbers",
+    "Is my saving growing in real terms?",
+    "What if Malaysian inflation rises to 4%?",
+]
+
 with tab_coach:
     illustrative_note()
-    st.info("AI Coach coming in the next step.")
+    api_key, model_name = coach.get_config()
+    ss.setdefault("chat", [])
+
+    chat_col, data_col = st.columns([3, 2], gap="large")
+
+    with data_col:
+        st.subheader("Engine results (check every number)")
+        show_results_table(result, currency)
+        st.caption("The coach may only use these numbers, or numbers from a "
+                   "what-if it runs through the same engine.")
+
+    with chat_col:
+        st.subheader("Ask the coach")
+        if not api_key:
+            st.warning("The AI Coach is offline because no Gemini API key is set. "
+                       "Every other tab still works. To turn it on, add "
+                       "`GEMINI_API_KEY` to `.streamlit/secrets.toml` (see the "
+                       "README) and restart the app.")
+        else:
+            st.caption(f"Powered by Gemini ({model_name}). It explains the engine's "
+                       "numbers; it never calculates its own.")
+
+        clicked = None
+        qcols = st.columns(2)
+        for i, q in enumerate(SUGGESTED_QUESTIONS):
+            if qcols[i % 2].button(q, key=f"suggest_{i}", width="stretch",
+                                   disabled=not api_key):
+                clicked = q
+        if st.button("🗑️ Clear chat", disabled=not ss["chat"]):
+            ss["chat"] = []
+            st.rerun()
+
+        messages_box = st.container(height=480)
+        typed = st.chat_input("Ask about your plan, e.g. 'Why is converting now cheaper?'",
+                              disabled=not api_key)
+        prompt = typed or clicked
+
+        def render_message(m: dict) -> None:
+            with st.chat_message(m["role"]):
+                for s in m.get("sensitivity", []):
+                    st.caption("What-if run by the finance engine:")
+                    show_sensitivity(s, currency)
+                if m.get("error"):
+                    st.error(m["content"])
+                else:
+                    st.markdown(m["content"])
+
+        with messages_box:
+            if not ss["chat"]:
+                st.caption("Pick a suggested question or type your own below.")
+            for m in ss["chat"]:
+                render_message(m)
+
+            if prompt:
+                user_msg = {"role": "user", "content": prompt}
+                ss["chat"].append(user_msg)
+                render_message(user_msg)
+                with st.spinner("Checking the numbers..."):
+                    try:
+                        reply = coach.ask_coach(ss["chat"], inputs, result,
+                                                model=model_name)
+                        bot = {"role": "assistant",
+                               "content": reply.text or "Sorry, I had nothing to add. "
+                                                        "Try rephrasing your question.",
+                               "sensitivity": reply.tool_results}
+                    except coach.CoachUnavailable:
+                        bot = {"role": "assistant", "error": True,
+                               "content": "The AI Coach is offline (no API key). "
+                                          "The other tabs still work."}
+                    except Exception as exc:  # network, quota, bad model name...
+                        bot = {"role": "assistant", "error": True,
+                               "content": "Sorry, I could not reach the AI service "
+                                          "just now. Please try again in a moment. "
+                                          f"(Details: {type(exc).__name__})"}
+                ss["chat"].append(bot)
+                render_message(bot)
 
 # ---------- Tab 5: Learn ----------
 
