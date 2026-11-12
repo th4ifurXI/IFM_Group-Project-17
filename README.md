@@ -22,7 +22,7 @@ Students who are not finance majors face three questions with no easy answer:
 | --- | --- |
 | **Plan** | Sidebar inputs (destination, cost, months, spot, interest and inflation rates). Results table, verdict card (Convert now / Convert later / Either) and two charts. |
 | **Guided mode** | Walks through Scenario 1 step by step: formula, numbers plugged in, result and a plain-English meaning. |
-| **Sensitivity** | Change one input and see before / after / change, plus preset Scenario 2 (Malaysian inflation 2% to 4%) and Scenario 3 (Fisher holds). |
+| **Sensitivity** | Change one input and see before / after / change, plus one preset per verdict: Scenario 2 (Malaysian inflation 2% to 4%, Convert now), Scenario 3 (Fisher holds, Either) and Scenario 4 (Malaysian rate 3% to 5%, Convert later). |
 | **AI Coach** | A Gemini-powered tutor grounded in the engine's results. What-if questions are answered with a `run_sensitivity` tool that runs the finance engine in Python. |
 | **Learn** | Formulas, assumptions, limitations, glossary and references. |
 
