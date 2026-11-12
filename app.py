@@ -400,7 +400,9 @@ with tab_sens:
     st.subheader("What happens if one thing changes?")
     st.caption("Uses your sidebar plan as the starting point, unless you click a preset.")
 
-    p1, p2 = st.columns(2)
+    st.caption("Presets show each verdict: Scenario 2 gives Convert now, "
+               "Scenario 3 gives Either, Scenario 4 gives Convert later.")
+    p1, p2, p3 = st.columns(3)
     if p1.button("Scenario 2: Malaysian inflation 2% -> 4%", width="stretch"):
         ss["sens"] = {"result": finance.sensitivity(SCENARIO_1, "pi_my", 0.04),
                       "title": "Scenario 2: Malaysian inflation rises from 2% to 4% "
@@ -411,6 +413,11 @@ with tab_sens:
                                "(Malaysian inflation 4%), the Malaysian interest "
                                "rate adjusts from 3.00% to 5.01%",
                       "cur": SCENARIO_2.currency, "fisher": True}
+    if p3.button("Scenario 4: Malaysian rate 3% -> 5%", width="stretch"):
+        ss["sens"] = {"result": finance.sensitivity(SCENARIO_1, "i_my", 0.05),
+                      "title": "Scenario 4: Malaysian interest rate rises from 3% "
+                               "to 5% (inflation stays 2%)",
+                      "cur": SCENARIO_1.currency, "later": True}
 
     with st.form("sens_form"):
         f1, f2 = st.columns(2)
@@ -439,6 +446,11 @@ with tab_sens:
                        "extra inflation, both currencies earn the same real return "
                        "(Fisher Effect). The expected ringgit weakness is exactly "
                        "offset, so timing stops mattering.")
+        if ss["sens"].get("later"):
+            st.success("Your ringgit savings now earn a higher real return in "
+                       "Malaysia than the foreign currency does abroad (Fisher). "
+                       "That extra growth beats the ringgit weakness PPP expects, "
+                       "so keeping MYR and converting at departure is cheaper.")
 
 # ---------- Tab 4: AI Coach ----------
 

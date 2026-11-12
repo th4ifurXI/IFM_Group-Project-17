@@ -17,6 +17,7 @@ __all__ = [
     "SCENARIO_1",
     "SCENARIO_2",
     "SCENARIO_3",
+    "SCENARIO_4",
     "PRESETS",
     "DESTINATIONS",
     "ILLUSTRATIVE_LABEL",
@@ -28,6 +29,11 @@ ILLUSTRATIVE_LABEL = "Illustrative data - not current market rates"
 # the Malaysian interest rate has adjusted to 5.01%, the nominal rate that
 # gives the same real return as the foreign currency. Timing stops mattering.
 SCENARIO_3 = replace(SCENARIO_2, i_my=0.0501)
+
+# Scenario 4: Convert later. From Scenario 1, the Malaysian interest rate rises
+# to 5%, so the Malaysian real rate (2.94%) beats the foreign one (0.97%) and
+# keeping savings in MYR until departure is cheaper.
+SCENARIO_4 = replace(SCENARIO_1, i_my=0.05)
 
 # Destination presets. GBP is exactly Scenario 1 so the defaults reproduce
 # the verified worked example.
