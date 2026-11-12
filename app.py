@@ -9,6 +9,7 @@ explains those numbers.
 
 from __future__ import annotations
 
+import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 from plotly.subplots import make_subplots
@@ -138,8 +139,26 @@ def results_rows(r: dict, cur: str) -> list[dict]:
     ]
 
 
-def show_results_table(r: dict, cur: str) -> None:
-    st.dataframe(results_rows(r, cur), hide_index=True, width="stretch")
+def static_table(rows: list[dict], index: str) -> None:
+    """Static table: shows every row and column in full, no inner scrolling."""
+    st.table(pd.DataFrame(rows).set_index(index))
+
+
+def show_results_table(r: dict, cur: str, compact: bool = False) -> None:
+    rows = results_rows(r, cur)
+    if not compact:
+        static_table(rows, "Item")
+        return
+    short = ["Cost at departure", f"PPP rate (MYR/{cur})", f"IRP forward (MYR/{cur})",
+             "MYR if convert later", "PV convert later", f"{cur} to buy today",
+             "PV convert now", "MYR with forward", "PV forward",
+             "Saving if convert now", "Real rate, Malaysia", f"Real rate, {cur}",
+             "i_MY where Fisher holds", "Verdict"]
+    rows = [{"Item": s, "Value": x["Value"]} for s, x in zip(short, rows)]
+    st.dataframe(rows, hide_index=True, width="stretch",
+                 height=35 * (len(rows) + 1) + 3,
+                 column_config={"Item": st.column_config.TextColumn(width=170),
+                                "Value": st.column_config.TextColumn(width=130)})
 
 
 def verdict_card(r: dict) -> None:
@@ -234,7 +253,7 @@ def sensitivity_sentence(s: dict, cur: str = "") -> str:
 
 
 def show_sensitivity(s: dict, cur: str = "") -> None:
-    st.dataframe(sensitivity_rows(s), hide_index=True, width="stretch")
+    static_table(sensitivity_rows(s), "Measure")
     st.markdown(sensitivity_sentence(s, cur))
 
 
@@ -257,11 +276,8 @@ with tab_plan:
               rm_signed(result["saving_from_converting_now"]))
     verdict_card(result)
 
-    left, right = st.columns([1, 1])
+    left, right = st.columns(2, gap="large")
     with left:
-        st.subheader("Results from the finance engine")
-        show_results_table(result, currency)
-    with right:
         path = finance.cost_path(inputs)
         months_axis = [p["month"] for p in path]
         fig = make_subplots(specs=[[{"secondary_y": True}]])
@@ -284,27 +300,30 @@ with tab_plan:
         fig.update_yaxes(title_text="MYR", secondary_y=True, tickformat=",.0f")
         st.plotly_chart(fig, width="stretch")
 
+    with right:
         labels = ["Convert now", "Convert later", "Forward contract"]
         values = [result["pv_convert_now"], result["pv_convert_later"],
                   result["pv_forward"]]
         bar = go.Figure(go.Bar(
             x=labels, y=values, text=[rm(v) for v in values],
             textposition="outside",
-            marker_color=["#2E86AB", "#F18F01", "#6C757D"],
+            marker_color=["#0F766E", "#F59E0B", "#94A3B8"],
             hovertemplate="%{x}<br>RM%{y:,.2f}<extra></extra>"))
         lo, hi = min(values), max(values)
         pad = max((hi - lo) * 0.6, hi * 0.01)
         bar.update_layout(title="Present value in today's MYR (lower is cheaper)",
-                          height=340, margin=dict(l=10, r=10, t=50, b=10),
+                          height=360, margin=dict(l=10, r=10, t=50, b=10),
                           yaxis=dict(range=[lo - pad, hi + pad], tickformat=",.0f",
                                      title="MYR"))
         st.plotly_chart(bar, width="stretch")
         st.caption("The bar axis is zoomed in so small differences are visible.")
 
+    st.markdown("##### Results from the finance engine")
+    show_results_table(result, currency)
+
 # ---------- Tab 2: Guided mode ----------
 
 with tab_guided:
-    illustrative_note()
     st.subheader("Step-by-step worked example")
     source = st.radio("Walk through", ["Scenario 1 (worked example)",
                                        "My sidebar inputs"], horizontal=True)
@@ -378,7 +397,6 @@ with tab_guided:
 # ---------- Tab 3: Sensitivity ----------
 
 with tab_sens:
-    illustrative_note()
     st.subheader("What happens if one thing changes?")
     st.caption("Uses your sidebar plan as the starting point, unless you click a preset.")
 
@@ -432,20 +450,24 @@ SUGGESTED_QUESTIONS = [
 ]
 
 with tab_coach:
-    illustrative_note()
     api_key, model_name = coach.get_config()
     ss.setdefault("chat", [])
 
-    chat_col, data_col = st.columns([3, 2], gap="large")
+    chat_col, data_col = st.columns([5, 4], gap="large")
 
     with data_col:
-        st.subheader("Engine results (check every number)")
-        show_results_table(result, currency)
-        st.caption("The coach may only use these numbers, or numbers from a "
-                   "what-if it runs through the same engine.")
+        st.markdown("##### Engine results")
+        st.caption("The coach may only use these numbers, or a what-if it runs "
+                   "through the same engine.")
+        show_results_table(result, currency, compact=True)
 
     with chat_col:
-        st.subheader("Ask the coach")
+        head, clear = st.columns([3, 1], vertical_alignment="bottom")
+        head.markdown("##### Ask the coach")
+        if clear.button("Clear", icon=":material/delete:", key="clear_chat",
+                        disabled=not ss["chat"], width="stretch"):
+            ss["chat"] = []
+            st.rerun()
         if not api_key:
             st.warning("The AI Coach is offline because no Gemini API key is set. "
                        "Every other tab still works. To turn it on, add "
@@ -461,11 +483,8 @@ with tab_coach:
             if qcols[i % 2].button(q, key=f"suggest_{i}", width="stretch",
                                    disabled=not api_key):
                 clicked = q
-        if st.button("🗑️ Clear chat", disabled=not ss["chat"]):
-            ss["chat"] = []
-            st.rerun()
 
-        messages_box = st.container(height=480)
+        messages_box = st.container(height=520, border=True)
         typed = st.chat_input("Ask about your plan, e.g. 'Why is converting now cheaper?'",
                               disabled=not api_key)
         prompt = typed or clicked
