@@ -513,4 +513,88 @@ with tab_coach:
 # ---------- Tab 5: Learn ----------
 
 with tab_learn:
-    st.info("Learn content coming in the next step.")
+    st.subheader("Formulas used by the finance engine")
+    st.caption("Exchange rates are MYR per 1 unit of foreign currency. Rates are "
+               "annual decimals compounded once a year; t = months / 12.")
+    formulas = [
+        ("Foreign cost growth", r"Cost_t = Cost_0 \times (1 + \pi_f)^t",
+         "What the trip will cost abroad on departure day."),
+        ("Purchasing Power Parity (PPP)",
+         r"S_t = S_0 \times \left(\frac{1 + \pi_{MY}}{1 + \pi_f}\right)^t",
+         "Expected future spot rate: the higher-inflation currency weakens."),
+        ("Interest Rate Parity (IRP)",
+         r"F = S_0 \times \left(\frac{1 + i_{MY}}{1 + i_f}\right)^t",
+         "Fair forward rate: a forward contract costs the same as converting now "
+         "and saving abroad."),
+        ("International Fisher Effect (IFE)",
+         r"E[S_t] = S_0 \times \left(\frac{1 + i_{MY}}{1 + i_f}\right)^t",
+         "Interest rate gaps predict currency moves (same form as IRP)."),
+        ("Fisher Effect (exact real rate)", r"r = \frac{1 + i}{1 + \pi} - 1",
+         "What savings really earn after inflation."),
+        ("Present value", r"PV = \frac{FV}{(1 + i_{MY})^t}",
+         "Turns a future MYR amount into today's ringgit so options compare fairly."),
+    ]
+    fcols = st.columns(2)
+    for idx, (name, latex, meaning) in enumerate(formulas):
+        with fcols[idx % 2].container(border=True):
+            st.markdown(f"**{name}**")
+            st.latex(latex)
+            st.caption(meaning)
+
+    st.markdown("#### How the verdict is decided")
+    st.markdown(
+        "- **Convert later:** keep MYR at the Malaysian rate, convert on departure "
+        "at the PPP-expected rate, discount back to today.\n"
+        "- **Convert now:** buy just enough foreign currency today that, saved at "
+        "the foreign rate, covers the inflated cost.\n"
+        "- If the two present values are within 0.5% the verdict is **Either**; "
+        "otherwise the cheaper one wins.")
+
+    a, b = st.columns(2)
+    with a:
+        st.markdown("#### Assumptions")
+        st.markdown(
+            "- Rates and inflation stay constant until departure.\n"
+            "- PPP holds on average over the horizon.\n"
+            "- Interest is compounded once a year; no taxes.\n"
+            "- No bank fees, FX spreads or transfer costs.\n"
+            "- The whole budget is converted in one go.")
+    with b:
+        st.markdown("#### Limitations")
+        st.markdown(
+            "- PPP and IFE often fail in the short run; real exchange rates are "
+            "volatile.\n"
+            "- All rates in this app are illustrative, not market data.\n"
+            "- Students may not access foreign savings accounts or forward "
+            "contracts in practice.\n"
+            "- This is a learning tool, not financial advice.")
+
+    st.markdown("#### Glossary")
+    st.dataframe([
+        {"Term": "Spot rate", "Meaning": "Today's exchange rate, in MYR per 1 foreign unit."},
+        {"Term": "Forward rate", "Meaning": "A rate agreed today for exchanging money on a future date."},
+        {"Term": "Inflation", "Meaning": "How fast prices rise each year."},
+        {"Term": "Nominal interest rate", "Meaning": "The rate the bank quotes before inflation."},
+        {"Term": "Real interest rate", "Meaning": "Growth in buying power after inflation (Fisher)."},
+        {"Term": "Present value (PV)", "Meaning": "A future amount expressed in today's money."},
+        {"Term": "Appreciate / depreciate", "Meaning": "A currency getting stronger / weaker."},
+        {"Term": "PPP", "Meaning": "Exchange rates adjust so the same basket costs the same everywhere."},
+        {"Term": "IRP", "Meaning": "Forward rates reflect interest rate gaps, so there is no free profit."},
+        {"Term": "IFE", "Meaning": "The higher-interest currency is expected to weaken by the rate gap."},
+    ], hide_index=True, width="stretch")
+
+    st.markdown("#### References")
+    st.markdown(
+        "- Madura, J. *International Financial Management*. Cengage Learning "
+        "(course textbook).\n"
+        "- Bank Negara Malaysia. Interest rate and exchange rate statistics. "
+        "https://www.bnm.gov.my\n"
+        "- Department of Statistics Malaysia. Consumer Price Index releases. "
+        "https://www.dosm.gov.my\n"
+        "- International Monetary Fund. World Economic Outlook database. "
+        "https://www.imf.org")
+
+    st.markdown("#### AI-use disclosure")
+    st.info("[Placeholder: describe how your group used AI tools in building "
+            "this project, for example code assistance and the Gemini-powered "
+            "coach, and how outputs were checked against finance.py.]")
