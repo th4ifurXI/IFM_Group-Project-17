@@ -41,8 +41,7 @@ export default function GuidedPage({ scenario1, mine }: Props) {
   const d4 = (v: number) => v.toFixed(4);
 
   return (
-    <section>
-      <h2>Step-by-step worked example</h2>
+    <section className="guided">
       <div className="segmented" role="radiogroup">
         <button className={!useMine ? "active" : ""} onClick={() => setUseMine(false)}>Scenario 1 (worked example)</button>
         <button className={useMine ? "active" : ""} onClick={() => setUseMine(true)}>My plan inputs</button>

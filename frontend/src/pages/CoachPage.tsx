@@ -1,7 +1,8 @@
 import { Fragment, useEffect, useRef, useState, type ReactNode } from "react";
 
 import { api, ApiError, type ChatMessage, type Health, type Inputs, type Result, type Sensitivity } from "../api";
-import { ResultsTable, SensitivityView } from "../components/common";
+import { Disclosure, PlanChip, ResultsTable, SensitivityView } from "../components/common";
+import { shortVerdict } from "../format";
 
 interface UiMessage extends ChatMessage {
   tables?: Sensitivity[];
@@ -81,57 +82,69 @@ export default function CoachPage({ inputs, result }: { inputs: Inputs; result: 
   }
 
   return (
-    <section className="coach">
-      <div className="coach-chat">
-        <div className="coach-head">
-          <h2>Ask the coach</h2>
-          <button className="btn btn-ghost" disabled={!messages.length || busy} onClick={() => setMessages([])}>Clear chat</button>
-        </div>
-        {health && !online && (
-          <div className="alert alert-warn">The AI Coach is offline because the server has no Gemini API key.
-            Every other page still works. Set <code>GEMINI_API_KEY</code> on the backend and restart it.</div>
-        )}
-        {!health && <div className="alert alert-warn">Cannot reach the backend. Start it with <code>uvicorn backend.main:app</code>.</div>}
-        {online && <p className="caption">Powered by Gemini ({health?.model}). It explains the engine's numbers; it never calculates its own.</p>}
+    <div className="page coach">
+      <section className="hero">
+        <h1>Ask the coach</h1>
+        <p className="lead">Confused by a number? Ask in your own words. The coach explains your plan using only the numbers our engine calculated.</p>
+      </section>
 
-        <div className="suggest">
-          {SUGGESTED.map((q) => (
-            <button key={q} className="btn btn-secondary" disabled={!online || busy} onClick={() => ask(q)}>{q}</button>
-          ))}
+      <PlanChip inputs={inputs} />
+
+      {health && !online && (
+        <div className="alert alert-warn">The coach is offline because the server has no Gemini API key.
+          Everything else still works. Set <code>GEMINI_API_KEY</code> on the backend and restart it.</div>
+      )}
+      {!health && <div className="alert alert-warn">Cannot reach the backend. Start it with <code>uvicorn backend.main:app</code>.</div>}
+
+      <section className="card chat">
+        <div className="chat-head">
+          <span className="coach-id"><span className="avatar-lg" aria-hidden>🤖</span>
+            <span><strong>Ringgit Coach</strong><small>{online ? `Online · Gemini (${health?.model})` : "Offline"}</small></span>
+          </span>
+          <button className="btn btn-ghost" disabled={!messages.length || busy} onClick={() => setMessages([])}>Clear chat</button>
         </div>
 
         <div className="messages" aria-live="polite">
-          {!messages.length && <p className="caption">Pick a suggested question or type your own below.</p>}
+          {!messages.length && (
+            <div className="empty">
+              <p><strong>Hi! I'm your study-abroad money coach.</strong></p>
+              <p className="muted">Pick a question below to start. I'll name the theory behind each answer (PPP, IRP, Fisher or IFE).</p>
+            </div>
+          )}
           {messages.map((m, i) => (
             <div key={i} className={`msg msg-${m.role}${m.error ? " msg-error" : ""}`}>
-              <div className="avatar" aria-hidden>{m.role === "user" ? "🧑‍🎓" : "🤖"}</div>
+              {m.role === "assistant" && <div className="avatar" aria-hidden>🤖</div>}
               <div className="bubble">
                 {m.tables?.map((s, j) => (
-                  <div key={j} className="tool">
-                    <p className="caption">What-if run by the finance engine:</p>
-                    <SensitivityView s={s} cur={inputs.currency} />
-                  </div>
+                  <Disclosure key={j} title="What-if the engine ran" hint={`${shortVerdict(s.before.verdict)} → ${shortVerdict(s.after.verdict)}`}>
+                    <SensitivityView s={s} cur={inputs.currency} explain={false} />
+                  </Disclosure>
                 ))}
                 {m.role === "assistant" && !m.error ? <Markdown text={m.content} /> : <p>{m.content}</p>}
               </div>
             </div>
           ))}
-          {busy && <div className="msg msg-assistant"><div className="avatar">🤖</div><div className="bubble typing">Checking the numbers...</div></div>}
+          {busy && <div className="msg msg-assistant"><div className="avatar" aria-hidden>🤖</div><div className="bubble typing"><span className="dots"><i /><i /><i /></span> Checking the numbers</div></div>}
           <div ref={bottom} />
+        </div>
+
+        <div className="chips">
+          {SUGGESTED.map((q) => (
+            <button key={q} className="chip" disabled={!online || busy} onClick={() => ask(q)}>{q}</button>
+          ))}
         </div>
 
         <form className="composer" onSubmit={(e) => { e.preventDefault(); ask(draft); }}>
           <input value={draft} onChange={(e) => setDraft(e.target.value)} disabled={!online || busy}
-            placeholder="Ask about your plan, e.g. 'Why is converting now cheaper?'" maxLength={1000} />
+            placeholder="Ask anything about your plan..." maxLength={1000} aria-label="Your question" />
           <button className="btn" type="submit" disabled={!online || busy || !draft.trim()}>Send</button>
         </form>
-      </div>
+      </section>
 
-      <aside className="coach-data">
-        <h3>Engine results</h3>
-        <p className="caption">The coach may only use these numbers, or a what-if it runs through the same engine.</p>
+      <Disclosure title="Numbers the coach can see" hint="Every answer must match these">
         <ResultsTable r={result} compact />
-      </aside>
-    </section>
+      </Disclosure>
+      <p className="caption center">A learning tool, not a licensed financial advisor.</p>
+    </div>
   );
 }

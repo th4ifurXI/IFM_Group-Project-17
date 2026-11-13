@@ -70,7 +70,9 @@ Run from the repo root: `uvicorn backend.main:app --reload`, then open http://lo
 
 **Stack:** React + TypeScript with Vite, Plotly (`plotly.js-basic-dist-min`) for charts, KaTeX for formulas, plain CSS. Run with `npm install` then `npm run dev` inside `frontend/`; `/api` is proxied to the backend on port 8000. The frontend never calculates finance numbers; it only formats what the API returns.
 
-**Pages (same five as the Streamlit app):**
+**Redesign (13 Nov):** the first version copied the Streamlit layout and felt cluttered, so the site was redesigned around three ideas from fintech UX practice: answer first (like Wise's converter), progressive disclosure (details only on request), and ask only for what's needed. It now has four sections: **My plan** (destination, budget and departure date first; interest and inflation rates under "Economic assumptions"; one big answer card; four insight cards; charts and full table behind "Charts and all the numbers"), **What if?** (three story cards, one per verdict, plus a custom what-if), **Ask coach** (chat-first, the coach's numbers in an expandable panel) and **Learn** (step-by-step worked example, theories, key words, assumptions and sources). Phones get a bottom tab bar. Every feature below is still there; it is just reorganised.
+
+**Original page spec (all features kept):**
 
 1. **Plan:** input panel (destination, cost, months 1 to 36, spot, Malaysia and foreign interest rates, Malaysia and foreign inflation as percent sliders converted to decimals before sending). Shows three key figures, a verdict card (Convert now, Convert later or Either), a cost-over-time chart from `cost_path`, a present-value bar chart (now, later, forward) and the full results table.
 2. **Guided mode:** Scenario 1 step by step (foreign cost growth, PPP rate, MYR needed later, PV later, convert now, IRP check, Fisher real rate). Each step shows the formula, the numbers plugged in, the result from the API and a 1 to 2 sentence plain-English meaning.

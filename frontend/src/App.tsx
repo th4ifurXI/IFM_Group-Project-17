@@ -2,25 +2,25 @@ import { useEffect, useState } from "react";
 
 import { api, type ComputeResponse, type Inputs, type Presets } from "./api";
 import { ErrorBox, IllustrativeNote } from "./components/common";
-import InputPanel from "./components/InputPanel";
 import CoachPage from "./pages/CoachPage";
-import GuidedPage from "./pages/GuidedPage";
 import LearnPage from "./pages/LearnPage";
 import PlanPage from "./pages/PlanPage";
-import SensitivityPage from "./pages/SensitivityPage";
+import WhatIfPage from "./pages/WhatIfPage";
 
 const TABS = [
-  { id: "plan", label: "📊 Plan" },
-  { id: "guided", label: "🧭 Guided mode" },
-  { id: "sensitivity", label: "🔀 Sensitivity" },
-  { id: "coach", label: "🤖 AI Coach" },
-  { id: "learn", label: "📚 Learn" },
+  { id: "plan", label: "My plan", icon: "🎓" },
+  { id: "whatif", label: "What if?", icon: "🔀" },
+  { id: "coach", label: "Ask coach", icon: "🤖" },
+  { id: "learn", label: "Learn", icon: "📚" },
 ] as const;
 type TabId = (typeof TABS)[number]["id"];
 
+// Old links from the first version still work.
+const ALIASES: Record<string, TabId> = { sensitivity: "whatif", guided: "learn" };
+
 const tabFromHash = (): TabId => {
   const h = window.location.hash.slice(1);
-  return (TABS.find((t) => t.id === h)?.id ?? "plan") as TabId;
+  return (ALIASES[h] ?? TABS.find((t) => t.id === h)?.id ?? "plan") as TabId;
 };
 
 export default function App() {
@@ -34,7 +34,7 @@ export default function App() {
     api.presets()
       .then((p) => { setPresets(p); setInputs(p.destinations[p.default].inputs); })
       .catch((e) => setError(e.message));
-    const onHash = () => setTab(tabFromHash());
+    const onHash = () => { setTab(tabFromHash()); window.scrollTo({ top: 0 }); };
     window.addEventListener("hashchange", onHash);
     return () => window.removeEventListener("hashchange", onHash);
   }, []);
@@ -51,45 +51,51 @@ export default function App() {
     return () => { live = false; clearTimeout(id); };
   }, [inputs]);
 
-  const go = (id: TabId) => { window.location.hash = id; setTab(id); };
+  const nav = (className: string) => (
+    <nav className={className} aria-label="Sections">
+      {TABS.map((t) => (
+        <a key={t.id} href={`#${t.id}`} className={tab === t.id ? "active" : undefined}
+          aria-current={tab === t.id ? "page" : undefined}>
+          <span aria-hidden>{t.icon}</span> {t.label}
+        </a>
+      ))}
+    </nav>
+  );
 
   return (
-    <div className="layout">
-      {presets && inputs
-        ? <InputPanel inputs={inputs} presets={presets} onChange={setInputs} />
-        : <aside className="panel"><p className="caption">Loading plan...</p></aside>}
+    <div className="app">
+      <header className="topbar">
+        <div className="topbar-inner">
+          <a href="#plan" className="brand">
+            <span className="logo" aria-hidden>RM</span>
+            <span>Ringgit Coach<small>Know when to convert, what it will cost, and why.</small></span>
+          </a>
+          {nav("nav-top")}
+        </div>
+      </header>
 
-      <main className="main">
-        <header className="header">
-          <h1><span className="logo" aria-hidden>RM</span> StudyAbroad Ringgit Coach</h1>
-          <p className="tagline">Know when to convert, what it will cost, and why.</p>
-          <IllustrativeNote />
-        </header>
-
-        <nav className="tabs" role="tablist">
-          {TABS.map((t) => (
-            <button key={t.id} role="tab" aria-selected={tab === t.id}
-              className={tab === t.id ? "tab active" : "tab"} onClick={() => go(t.id)}>{t.label}</button>
-          ))}
-        </nav>
-
+      <main className="container">
+        <div className="data-note"><IllustrativeNote /></div>
         {error && <ErrorBox message={`${error} Start the backend with: uvicorn backend.main:app --reload`} />}
+        {!data && !error && <p className="loading">Loading your plan...</p>}
 
         {presets && inputs && data && (
           <>
-            {tab === "plan" && <PlanPage data={data} />}
-            {tab === "guided" && <GuidedPage scenario1={presets.destinations.GBP.inputs} mine={inputs} />}
-            {tab === "sensitivity" && <SensitivityPage inputs={inputs} />}
-            {/* Kept mounted so the conversation survives tab switches. */}
+            {tab === "plan" && <PlanPage inputs={inputs} presets={presets} data={data} onChange={setInputs} />}
+            {tab === "whatif" && <WhatIfPage inputs={inputs} />}
+            {/* Kept mounted so the conversation survives switching sections. */}
             <div hidden={tab !== "coach"}><CoachPage inputs={inputs} result={data.result} /></div>
-            {tab === "learn" && <LearnPage />}
+            {tab === "learn" && <LearnPage scenario1={presets.destinations.GBP.inputs} mine={inputs} />}
           </>
         )}
 
         <footer className="footer">
-          Learning tool for GFB3043 International Financial Management (UTP). Not financial advice.
+          StudyAbroad Ringgit Coach · a learning tool for GFB3043 International Financial Management (UTP).
+          Not financial advice.
         </footer>
       </main>
+
+      {nav("nav-bottom")}
     </div>
   );
 }

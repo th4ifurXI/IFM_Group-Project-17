@@ -1,4 +1,8 @@
+import { useState } from "react";
+
+import type { Inputs } from "../api";
 import { Tex } from "../components/common";
+import GuidedPage from "./GuidedPage";
 
 const FORMULAS = [
   ["Foreign cost growth", String.raw`Cost_t = Cost_0 \times (1 + \pi_f)^t`, "What the trip will cost abroad on departure day."],
@@ -22,71 +26,107 @@ const GLOSSARY = [
   ["IFE", "The higher-interest currency is expected to weaken by the rate gap."],
 ];
 
-export default function LearnPage() {
+const SECTIONS = [
+  { id: "steps", label: "Step by step" },
+  { id: "theories", label: "The theories" },
+  { id: "words", label: "Key words" },
+  { id: "limits", label: "Assumptions and limits" },
+  { id: "sources", label: "Sources" },
+] as const;
+type SectionId = (typeof SECTIONS)[number]["id"];
+
+export default function LearnPage({ scenario1, mine }: { scenario1: Inputs; mine: Inputs }) {
+  const [section, setSection] = useState<SectionId>("steps");
+
   return (
-    <section className="learn">
-      <h2>Formulas used by the finance engine</h2>
-      <p className="caption">Exchange rates are MYR per 1 unit of foreign currency. Rates are annual decimals
-        compounded once a year; t = months / 12.</p>
-      <div className="grid-2">
-        {FORMULAS.map(([name, tex, meaning]) => (
-          <div className="card" key={name}>
-            <strong>{name}</strong>
-            <Tex expr={tex} />
-            <p className="caption">{meaning}</p>
-          </div>
+    <div className="page learn">
+      <section className="hero">
+        <h1>How it works</h1>
+        <p className="lead">The four International Financial Management ideas behind every answer, explained one step at a time.</p>
+      </section>
+
+      <div className="pills" role="tablist">
+        {SECTIONS.map((s) => (
+          <button key={s.id} role="tab" aria-selected={section === s.id}
+            className={section === s.id ? "pill-btn active" : "pill-btn"} onClick={() => setSection(s.id)}>{s.label}</button>
         ))}
       </div>
 
-      <h3>How the verdict is decided</h3>
-      <ul>
-        <li><strong>Convert later:</strong> keep MYR at the Malaysian rate, convert on departure at the PPP-expected rate, discount back to today.</li>
-        <li><strong>Convert now:</strong> buy just enough foreign currency today that, saved at the foreign rate, covers the inflated cost.</li>
-        <li>If the two present values are within 0.5% the verdict is <strong>Either</strong>; otherwise the cheaper one wins.</li>
-        <li>Rule of thumb: the verdict follows the Fisher real-rate gap. A higher real rate abroad means convert now; a higher real rate in Malaysia means convert later.</li>
-      </ul>
+      {section === "steps" && <GuidedPage scenario1={scenario1} mine={mine} />}
 
-      <div className="grid-2">
-        <div>
-          <h3>Assumptions</h3>
-          <ul>
-            <li>Rates and inflation stay constant until departure.</li>
-            <li>PPP holds on average over the horizon.</li>
-            <li>Interest is compounded once a year; no taxes.</li>
-            <li>No bank fees, FX spreads or transfer costs.</li>
-            <li>The whole budget is converted in one go.</li>
-          </ul>
+      {section === "theories" && (
+        <>
+          <div className="grid-2">
+            {FORMULAS.map(([name, tex, meaning]) => (
+              <div className="card theory" key={name}>
+                <strong>{name}</strong>
+                <Tex expr={tex} />
+                <p className="muted">{meaning}</p>
+              </div>
+            ))}
+          </div>
+          <div className="card">
+            <h3>How the answer is decided</h3>
+            <ul>
+              <li><strong>Convert later:</strong> keep ringgit earning Malaysian interest, convert when you leave at the PPP-expected rate.</li>
+              <li><strong>Convert now:</strong> buy just enough foreign currency today and let it earn interest abroad.</li>
+              <li>We compare both in today's money. Within 0.5% of each other, the answer is <strong>Either</strong>.</li>
+              <li><strong>Rule of thumb:</strong> whichever currency gives the higher real interest rate (Fisher) wins.</li>
+            </ul>
+          </div>
+        </>
+      )}
+
+      {section === "words" && (
+        <div className="glossary">
+          {GLOSSARY.map(([t, m]) => (
+            <div className="card term" key={t}><strong>{t}</strong><p className="muted">{m}</p></div>
+          ))}
         </div>
-        <div>
-          <h3>Limitations</h3>
-          <ul>
-            <li>PPP and IFE often fail in the short run; real exchange rates are volatile.</li>
-            <li>All rates in this app are illustrative, not market data.</li>
-            <li>Students may not access foreign savings accounts or forward contracts in practice.</li>
-            <li>This is a learning tool, not financial advice.</li>
-          </ul>
+      )}
+
+      {section === "limits" && (
+        <div className="grid-2">
+          <div className="card">
+            <h3>What we assume</h3>
+            <ul>
+              <li>Rates and inflation stay constant until departure.</li>
+              <li>PPP holds on average over the horizon.</li>
+              <li>Interest is compounded once a year; no taxes.</li>
+              <li>No bank fees, FX spreads or transfer costs.</li>
+              <li>The whole budget is converted in one go.</li>
+            </ul>
+          </div>
+          <div className="card">
+            <h3>What to keep in mind</h3>
+            <ul>
+              <li>PPP and IFE often fail in the short run; real exchange rates are volatile.</li>
+              <li>All rates in this app are illustrative, not market data.</li>
+              <li>Students may not access foreign savings accounts or forward contracts in practice.</li>
+              <li>This is a learning tool, not financial advice.</li>
+            </ul>
+          </div>
         </div>
-      </div>
+      )}
 
-      <h3>Glossary</h3>
-      <div className="table-wrap">
-        <table className="table">
-          <thead><tr><th>Term</th><th>Meaning</th></tr></thead>
-          <tbody>{GLOSSARY.map(([t, m]) => <tr key={t}><td><strong>{t}</strong></td><td>{m}</td></tr>)}</tbody>
-        </table>
-      </div>
-
-      <h3>References</h3>
-      <ul>
-        <li>Madura, J. <em>International Financial Management</em>. Cengage Learning (course textbook).</li>
-        <li>Bank Negara Malaysia. Interest rate and exchange rate statistics. <a href="https://www.bnm.gov.my" target="_blank" rel="noreferrer">bnm.gov.my</a></li>
-        <li>Department of Statistics Malaysia. Consumer Price Index releases. <a href="https://www.dosm.gov.my" target="_blank" rel="noreferrer">dosm.gov.my</a></li>
-        <li>International Monetary Fund. World Economic Outlook database. <a href="https://www.imf.org" target="_blank" rel="noreferrer">imf.org</a></li>
-      </ul>
-
-      <h3>AI-use disclosure</h3>
-      <div className="alert alert-info">[Placeholder: describe how your group used AI tools in building this project,
-        for example code assistance and the Gemini-powered coach, and how outputs were checked against finance.py.]</div>
-    </section>
+      {section === "sources" && (
+        <div className="grid-2">
+          <div className="card">
+            <h3>References</h3>
+            <ul>
+              <li>Madura, J. <em>International Financial Management</em>. Cengage Learning (course textbook).</li>
+              <li>Bank Negara Malaysia. Interest rate and exchange rate statistics. <a href="https://www.bnm.gov.my" target="_blank" rel="noreferrer">bnm.gov.my</a></li>
+              <li>Department of Statistics Malaysia. Consumer Price Index releases. <a href="https://www.dosm.gov.my" target="_blank" rel="noreferrer">dosm.gov.my</a></li>
+              <li>International Monetary Fund. World Economic Outlook database. <a href="https://www.imf.org" target="_blank" rel="noreferrer">imf.org</a></li>
+            </ul>
+          </div>
+          <div className="card">
+            <h3>AI-use disclosure</h3>
+            <p className="muted">[Placeholder: describe how your group used AI tools in building this project, for example
+              code assistance and the Gemini-powered coach, and how outputs were checked against finance.py.]</p>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }

@@ -1,20 +1,71 @@
 import katex from "katex";
 import "katex/dist/katex.min.css";
 import Plotly from "plotly.js-basic-dist-min";
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
-import { ILLUSTRATIVE_LABEL, type Result, type Sensitivity, type SensKey } from "../api";
+import { ILLUSTRATIVE_LABEL, type Inputs, type Result, type Sensitivity, type SensKey } from "../api";
 import {
-  FIELD_LABELS, fmtField, fx, pct, resultRows, rm, rmSigned, shortVerdict,
+  FIELD_LABELS, fc, fmtField, fx, pct, resultRows, rm, rmSigned, shortVerdict,
 } from "../format";
+
+// ---------- destinations ----------
+
+export const DEST: Record<string, { country: string; symbol: string }> = {
+  GBP: { country: "United Kingdom", symbol: "£" },
+  AUD: { country: "Australia", symbol: "A$" },
+  USD: { country: "United States", symbol: "$" },
+};
+
+export function CurrencyBadge({ code, size = "md" }: { code: string; size?: "sm" | "md" }) {
+  return <span className={`cur-badge cur-${code.toLowerCase()} cur-${size}`} aria-hidden>{DEST[code]?.symbol ?? code}</span>;
+}
 
 // ---------- small building blocks ----------
 
 export function IllustrativeNote() {
   return (
-    <p className="note">
-      <span aria-hidden>⚠️</span> <strong>{ILLUSTRATIVE_LABEL}.</strong> For learning only.
-    </p>
+    <span className="pill pill-warn" title="All rates are made up for learning. They are not live market data.">
+      ⚠️ {ILLUSTRATIVE_LABEL}
+    </span>
+  );
+}
+
+/** Small "?" that explains a term in plain words on hover, focus or tap. */
+export function Tip({ text }: { text: string }) {
+  return (
+    <span className="tip" tabIndex={0} role="note" aria-label={text}>
+      ?<span className="tip-text" role="tooltip">{text}</span>
+    </span>
+  );
+}
+
+/** Collapsible section. Children render only once opened (keeps charts sized correctly). */
+export function Disclosure({ title, hint, children, defaultOpen = false }: {
+  title: string; hint?: string; children: ReactNode; defaultOpen?: boolean;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <details className="disclosure" open={open} onToggle={(e) => setOpen((e.target as HTMLDetailsElement).open)}>
+      <summary>
+        <span>{title}</span>
+        {hint && <span className="disclosure-hint">{hint}</span>}
+      </summary>
+      {open && <div className="disclosure-body">{children}</div>}
+    </details>
+  );
+}
+
+/** "Your plan: UK, GBP 20,000, 12 months. Edit" summary shown on other pages. */
+export function PlanChip({ inputs }: { inputs: Inputs }) {
+  return (
+    <div className="plan-chip">
+      <CurrencyBadge code={inputs.currency} size="sm" />
+      <span>
+        <strong>{DEST[inputs.currency]?.country ?? inputs.currency}</strong>
+        <span className="muted"> · {fc(inputs.cost_foreign, inputs.currency)} · leaving in {inputs.months} months</span>
+      </span>
+      <a href="#plan" className="link">Edit plan</a>
+    </div>
   );
 }
 
@@ -149,7 +200,7 @@ export function sensitivitySentence(s: Sensitivity, cur = ""): string {
     `${rm(s.after.saving_from_converting_now)}), and ${verdictPart}. ${SENS_WHY[s.field]}`;
 }
 
-export function SensitivityView({ s, cur = "" }: { s: Sensitivity; cur?: string }) {
+export function SensitivityView({ s, cur = "", explain = true }: { s: Sensitivity; cur?: string; explain?: boolean }) {
   return (
     <div className="sens">
       <div className="table-wrap">
@@ -173,7 +224,7 @@ export function SensitivityView({ s, cur = "" }: { s: Sensitivity; cur?: string 
           </tbody>
         </table>
       </div>
-      <p className="explain">{sensitivitySentence(s, cur)}</p>
+      {explain && <p className="explain">{sensitivitySentence(s, cur)}</p>}
     </div>
   );
 }
