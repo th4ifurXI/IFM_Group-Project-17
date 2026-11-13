@@ -99,6 +99,17 @@ The app works without an API key; only the AI Coach tab is disabled.
 pytest
 ```
 
+## Full-stack version (in progress, `fullstack` branch)
+
+A FastAPI backend reuses `finance.py` and `coach.py` unchanged, ready for a React frontend. See [docs/team_brief_fullstack.md](docs/team_brief_fullstack.md) for the plan.
+
+```bash
+pip install -r backend/requirements.txt
+uvicorn backend.main:app --reload
+```
+
+Open http://localhost:8000/docs to try every endpoint. The backend reads `GEMINI_API_KEY` from an environment variable (not from `.streamlit/secrets.toml`).
+
 ## Deploy to Streamlit Community Cloud
 
 1. Push the repo to GitHub (without `secrets.toml`).
