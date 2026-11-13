@@ -51,6 +51,7 @@ class ChatMessage(BaseModel):
 class ChatRequest(BaseModel):
     inputs: InputsModel
     messages: list[ChatMessage] = Field(min_length=1, max_length=50)
+    language: Literal["en", "ms"] = "en"   # ms = Bahasa Melayu
 
 
 class ChatResponse(BaseModel):

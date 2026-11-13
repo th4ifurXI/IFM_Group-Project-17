@@ -1,17 +1,18 @@
 import { useEffect, useState } from "react";
 
 import { api, type ComputeResponse, type Inputs, type Presets } from "./api";
-import { ErrorBox, IllustrativeNote } from "./components/common";
+import { ErrorBox, IllustrativeNote, LanguageToggle } from "./components/common";
+import { useI18n } from "./i18n";
 import CoachPage from "./pages/CoachPage";
 import LearnPage from "./pages/LearnPage";
 import PlanPage from "./pages/PlanPage";
 import WhatIfPage from "./pages/WhatIfPage";
 
 const TABS = [
-  { id: "plan", label: "My plan", icon: "🎓" },
-  { id: "whatif", label: "What if?", icon: "🔀" },
-  { id: "coach", label: "Ask coach", icon: "🤖" },
-  { id: "learn", label: "Learn", icon: "📚" },
+  { id: "plan", icon: "🎓" },
+  { id: "whatif", icon: "🔀" },
+  { id: "coach", icon: "🤖" },
+  { id: "learn", icon: "📚" },
 ] as const;
 type TabId = (typeof TABS)[number]["id"];
 
@@ -24,6 +25,7 @@ const tabFromHash = (): TabId => {
 };
 
 export default function App() {
+  const { t } = useI18n();
   const [presets, setPresets] = useState<Presets | null>(null);
   const [inputs, setInputs] = useState<Inputs | null>(null);
   const [data, setData] = useState<ComputeResponse | null>(null);
@@ -53,10 +55,10 @@ export default function App() {
 
   const nav = (className: string) => (
     <nav className={className} aria-label="Sections">
-      {TABS.map((t) => (
-        <a key={t.id} href={`#${t.id}`} className={tab === t.id ? "active" : undefined}
-          aria-current={tab === t.id ? "page" : undefined}>
-          <span aria-hidden>{t.icon}</span> {t.label}
+      {TABS.map((tb) => (
+        <a key={tb.id} href={`#${tb.id}`} className={tab === tb.id ? "active" : undefined}
+          aria-current={tab === tb.id ? "page" : undefined}>
+          <span aria-hidden>{tb.icon}</span> {t.nav[tb.id]}
         </a>
       ))}
     </nav>
@@ -68,16 +70,17 @@ export default function App() {
         <div className="topbar-inner">
           <a href="#plan" className="brand">
             <span className="logo" aria-hidden>RM</span>
-            <span>Ringgit Coach<small>Know when to convert, what it will cost, and why.</small></span>
+            <span>{t.appName}<small>{t.tagline}</small></span>
           </a>
           {nav("nav-top")}
+          <LanguageToggle />
         </div>
       </header>
 
       <main className="container">
         <div className="data-note"><IllustrativeNote /></div>
-        {error && <ErrorBox message={`${error} Start the backend with: uvicorn backend.main:app --reload`} />}
-        {!data && !error && <p className="loading">Loading your plan...</p>}
+        {error && <ErrorBox message={t.backendError(error)} />}
+        {!data && !error && <p className="loading">{t.loading}</p>}
 
         {presets && inputs && data && (
           <>
@@ -89,10 +92,7 @@ export default function App() {
           </>
         )}
 
-        <footer className="footer">
-          StudyAbroad Ringgit Coach · a learning tool for GFB3043 International Financial Management (UTP).
-          Not financial advice.
-        </footer>
+        <footer className="footer">{t.footer}</footer>
       </main>
 
       {nav("nav-bottom")}

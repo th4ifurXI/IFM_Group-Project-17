@@ -90,7 +90,7 @@ def test_chat_with_stubbed_coach(monkeypatch):
     monkeypatch.setenv("GEMINI_API_KEY", "test-key")
     monkeypatch.setattr(coach, "make_client", lambda key: object())
 
-    def fake_ask(messages, inputs, result, client=None, model=None):
+    def fake_ask(messages, inputs, result, client=None, model=None, language="en"):
         assert result == finance.compute(SCENARIO_1)     # grounded in the engine
         assert messages[-1]["content"] == "What if inflation is 4%?"
         return coach.CoachReply(
@@ -118,3 +118,22 @@ def test_chat_api_failure_returns_502(monkeypatch):
     r = client.post("/api/chat", json={
         "inputs": S1, "messages": [{"role": "user", "content": "hi"}]})
     assert r.status_code == 502
+
+
+def test_chat_passes_language_to_coach(monkeypatch):
+    monkeypatch.setenv("GEMINI_API_KEY", "test-key")
+    monkeypatch.setattr(coach, "make_client", lambda key: object())
+    seen = {}
+
+    def fake_ask(messages, inputs, result, client=None, model=None, language="en"):
+        seen["language"] = language
+        return coach.CoachReply(text="Tukar sekarang.", tool_results=[])
+
+    monkeypatch.setattr(coach, "ask_coach", fake_ask)
+    r = client.post("/api/chat", json={
+        "inputs": S1, "language": "ms",
+        "messages": [{"role": "user", "content": "Patutkah saya tukar sekarang?"}]})
+    assert r.status_code == 200 and seen["language"] == "ms"
+    bad = client.post("/api/chat", json={
+        "inputs": S1, "language": "fr", "messages": [{"role": "user", "content": "hi"}]})
+    assert bad.status_code == 422

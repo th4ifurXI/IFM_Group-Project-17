@@ -375,3 +375,12 @@ input[type="range"] { accent-color: var(--primary); width: 100%; margin: 0.4rem 
   .chat-head small { max-width: 11rem; }
 }
 @media (max-width: 560px) { .disclosure-hint { display: none; } }
+
+/* ---------- language toggle ---------- */
+.lang-toggle { display: inline-flex; border: 1px solid var(--border); border-radius: 999px; padding: 2px; background: #fff; flex-shrink: 0; }
+.lang-toggle button {
+  border: none; background: transparent; cursor: pointer; font-weight: 700; font-size: 0.78rem;
+  padding: 0.3rem 0.65rem; border-radius: 999px; color: var(--muted);
+}
+.lang-toggle button.active { background: var(--primary); color: #fff; }
+@media (max-width: 760px) { .topbar-inner { gap: 0.5rem; } }

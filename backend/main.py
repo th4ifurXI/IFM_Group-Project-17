@@ -133,7 +133,8 @@ def chat(req: ChatRequest) -> ChatResponse:
     result = finance.compute(x)
     try:
         reply = coach.ask_coach([m.model_dump() for m in req.messages], x, result,
-                                client=coach.make_client(api_key), model=model)
+                                client=coach.make_client(api_key), model=model,
+                                language=req.language)
     except Exception as exc:  # network, quota, bad model name
         raise HTTPException(status_code=502,
                             detail=f"Could not reach the AI service ({type(exc).__name__}).") from exc

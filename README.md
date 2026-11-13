@@ -101,7 +101,7 @@ pytest
 
 ## Full-stack version (`fullstack` branch)
 
-A FastAPI backend and a React + TypeScript frontend (Vite) with the same five pages. The backend reuses `finance.py` and `coach.py` unchanged. See [docs/team_brief_fullstack.md](docs/team_brief_fullstack.md) for the plan.
+A FastAPI backend and a React + TypeScript frontend (Vite), available in English and Bahasa Melayu (EN / BM switch; the AI Coach answers in the chosen language). The backend reuses `finance.py` and `coach.py` unchanged. See [docs/team_brief_fullstack.md](docs/team_brief_fullstack.md) for the plan.
 
 Needs Python and Node.js (LTS). Run in two terminals from the repo root:
 

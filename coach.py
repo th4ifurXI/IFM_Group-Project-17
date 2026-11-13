@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 from dataclasses import asdict, dataclass, field
 from typing import Any
 
@@ -44,7 +45,9 @@ Rules you must always follow:
 - Exchange rates are MYR per 1 unit of foreign currency.
 - Mention that the data is illustrative, not current market rates.
 - Keep answers under 150 words, using short plain bullet points. Explain jargon in everyday words. Do not use em dashes.
-- Money format: RM with 2 decimals (e.g. RM114,873.79); exchange rates with 4 decimals; percents with 2 decimals.
+- Money format: RM with 2 decimals (e.g. RM114,873.79; negative amounts as -RM10.83, never RM-10.83); foreign amounts with the currency code first and thousands separators (GBP 20,600.00); exchange rates with 4 decimals; percents with 2 decimals.
+- Never show JSON field names such as pv_convert_later or real_rate_my. Describe them in plain words (e.g. "the cost of converting later in today's money").
+- Show rates as percentages only (0.98%), never as raw decimals like 0.009804.
 - If asked for personal investment advice, which bank or product to choose, or anything off-topic, decline briefly with "I'm a learning tool, not a licensed advisor." and steer back to their study-abroad plan.
 
 How to read the JSON: pv_convert_later and pv_convert_now are today's-money (present value) costs of each option; saving_from_converting_now > 0 means converting now is cheaper; pv_forward equal to pv_convert_now shows IRP holds; real_rate_my and real_rate_foreign are Fisher real rates as decimals; fisher_i_my_to_match_foreign_real is the Malaysian rate at which Fisher would hold."""
@@ -86,9 +89,51 @@ def build_plan_json(inputs: Inputs, result: dict) -> str:
     )
 
 
-def build_system_instruction(inputs: Inputs, result: dict) -> str:
-    return (f"{SYSTEM_INSTRUCTION}\n\nPLAN DATA (from finance.py):\n"
-            f"{build_plan_json(inputs, result)}")
+LANGUAGE_INSTRUCTIONS = {
+    "en": "",
+    "ms": (
+        "\n\nLANGUAGE: Reply ONLY in Bahasa Melayu (Malaysia), in simple everyday words a "
+        "university student would use. Do not use English theory names. Always write the "
+        "theories exactly as: Pariti Kuasa Beli (PPP), Pariti Kadar Faedah (IRP), "
+        "Kesan Fisher, Kesan Fisher Antarabangsa (IFE). Present value is 'nilai kini', "
+        "real interest rate is 'kadar faedah benar'. Say 'tukar sekarang' for convert "
+        "now, 'tukar kemudian' for convert later and 'mana-mana pun' for either. Keep "
+        "numbers exactly as given (RM114,873.79 style). To decline, say: \"Saya alat "
+        "pembelajaran, bukan penasihat kewangan berlesen.\" Say the data is ilustrasi, "
+        "bukan kadar pasaran semasa."
+    ),
+}
+
+
+def build_system_instruction(inputs: Inputs, result: dict, language: str = "en") -> str:
+    # The language rule goes first and is repeated last: models follow it more reliably.
+    lang_rule = LANGUAGE_INSTRUCTIONS.get(language, "").strip()
+    head = f"{lang_rule}\n\n" if lang_rule else ""
+    tail = f"\n\nREMINDER: {lang_rule}" if lang_rule else ""
+    return (f"{head}{SYSTEM_INSTRUCTION}{tail}"
+            f"\n\nPLAN DATA (from finance.py):\n{build_plan_json(inputs, result)}")
+
+
+# Deterministic clean-up of the model's wording. It never changes a number.
+_MS_TERMS = [  # longest first, so "International Fisher Effect" wins over "Fisher Effect"
+    ("International Fisher Effect", "Kesan Fisher Antarabangsa"),
+    ("Purchasing Power Parity", "Pariti Kuasa Beli"),
+    ("Interest Rate Parity", "Pariti Kadar Faedah"),
+    ("Fisher Effect", "Kesan Fisher"),
+    ("Convert now", "Tukar sekarang"),
+    ("Convert later", "Tukar kemudian"),
+]
+
+
+def polish_reply(text: str, language: str = "en") -> str:
+    """Fix money sign format (RM-10.83 -> -RM10.83) and, for Malay, English theory names."""
+    text = re.sub(r"RM-(?=\d)", "-RM", text)
+    if language == "ms":
+        for en_term, ms_term in _MS_TERMS:
+            text = re.sub(re.escape(en_term), ms_term, text, flags=re.IGNORECASE)
+            # "(Purchasing Power Parity / Pariti Kuasa Beli)" would now read twice
+            text = re.sub(rf"{re.escape(ms_term)}\s*/\s*{re.escape(ms_term)}", ms_term, text)
+    return text
 
 
 def build_history(messages: list[dict], limit: int = MAX_HISTORY) -> list[dict]:
@@ -194,7 +239,7 @@ def make_client(api_key: str):
 
 
 def ask_coach(messages: list[dict], inputs: Inputs, result: dict,
-              client=None, model: str | None = None) -> CoachReply:
+              client=None, model: str | None = None, language: str = "en") -> CoachReply:
     """Send one turn to Gemini, running any tool calls locally in Python."""
     if client is None:
         api_key, cfg_model = get_config()
@@ -209,7 +254,7 @@ def ask_coach(messages: list[dict], inputs: Inputs, result: dict,
 
     from google.genai import types
     config = types.GenerateContentConfig(
-        system_instruction=build_system_instruction(inputs, result),
+        system_instruction=build_system_instruction(inputs, result, language),
         tools=build_tools(),
         automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),
         temperature=0.3,
@@ -222,7 +267,7 @@ def ask_coach(messages: list[dict], inputs: Inputs, result: dict,
             model=model, contents=contents, config=config)
         calls = response.function_calls or []
         if not calls:
-            return CoachReply(text=(response.text or "").strip(),
+            return CoachReply(text=polish_reply((response.text or "").strip(), language),
                               tool_results=tool_results)
         contents.append(response.candidates[0].content)
         parts = []

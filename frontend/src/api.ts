@@ -129,6 +129,6 @@ export const api = {
     request<Sensitivity>("/api/sensitivity", { inputs, field, new_value }),
   scenario: (id: string) =>
     request<{ title: string; sensitivity: Sensitivity }>(`/api/scenarios/${id}`),
-  chat: (inputs: Inputs, messages: ChatMessage[]) =>
-    request<ChatResponse>("/api/chat", { inputs, messages: messages.slice(-10) }),
+  chat: (inputs: Inputs, messages: ChatMessage[], language: "en" | "ms" = "en") =>
+    request<ChatResponse>("/api/chat", { inputs, messages: messages.slice(-10), language }),
 };

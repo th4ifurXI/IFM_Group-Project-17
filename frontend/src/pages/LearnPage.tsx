@@ -2,53 +2,38 @@ import { useState } from "react";
 
 import type { Inputs } from "../api";
 import { Tex } from "../components/common";
+import { useI18n } from "../i18n";
 import GuidedPage from "./GuidedPage";
 
-const FORMULAS = [
-  ["Foreign cost growth", String.raw`Cost_t = Cost_0 \times (1 + \pi_f)^t`, "What the trip will cost abroad on departure day."],
-  ["Purchasing Power Parity (PPP)", String.raw`S_t = S_0 \times \left(\frac{1 + \pi_{MY}}{1 + \pi_f}\right)^t`, "Expected future spot rate: the higher-inflation currency weakens."],
-  ["Interest Rate Parity (IRP)", String.raw`F = S_0 \times \left(\frac{1 + i_{MY}}{1 + i_f}\right)^t`, "Fair forward rate: a forward contract costs the same as converting now and saving abroad."],
-  ["International Fisher Effect (IFE)", String.raw`E[S_t] = S_0 \times \left(\frac{1 + i_{MY}}{1 + i_f}\right)^t`, "Interest rate gaps predict currency moves (same form as IRP)."],
-  ["Fisher Effect (exact real rate)", String.raw`r = \frac{1 + i}{1 + \pi} - 1`, "What savings really earn after inflation."],
-  ["Present value", String.raw`PV = \frac{FV}{(1 + i_{MY})^t}`, "Turns a future MYR amount into today's ringgit so options compare fairly."],
+// Formulas are the same in both languages; names and meanings come from i18n.
+const TEX = [
+  String.raw`Cost_t = Cost_0 \times (1 + \pi_f)^t`,
+  String.raw`S_t = S_0 \times \left(\frac{1 + \pi_{MY}}{1 + \pi_f}\right)^t`,
+  String.raw`F = S_0 \times \left(\frac{1 + i_{MY}}{1 + i_f}\right)^t`,
+  String.raw`E[S_t] = S_0 \times \left(\frac{1 + i_{MY}}{1 + i_f}\right)^t`,
+  String.raw`r = \frac{1 + i}{1 + \pi} - 1`,
+  String.raw`PV = \frac{FV}{(1 + i_{MY})^t}`,
 ];
 
-const GLOSSARY = [
-  ["Spot rate", "Today's exchange rate, in MYR per 1 foreign unit."],
-  ["Forward rate", "A rate agreed today for exchanging money on a future date."],
-  ["Inflation", "How fast prices rise each year."],
-  ["Nominal interest rate", "The rate the bank quotes before inflation."],
-  ["Real interest rate", "Growth in buying power after inflation (Fisher)."],
-  ["Present value (PV)", "A future amount expressed in today's money."],
-  ["Appreciate / depreciate", "A currency getting stronger / weaker."],
-  ["PPP", "Exchange rates adjust so the same basket costs the same everywhere."],
-  ["IRP", "Forward rates reflect interest rate gaps, so there is no free profit."],
-  ["IFE", "The higher-interest currency is expected to weaken by the rate gap."],
-];
-
-const SECTIONS = [
-  { id: "steps", label: "Step by step" },
-  { id: "theories", label: "The theories" },
-  { id: "words", label: "Key words" },
-  { id: "limits", label: "Assumptions and limits" },
-  { id: "sources", label: "Sources" },
-] as const;
-type SectionId = (typeof SECTIONS)[number]["id"];
+const SECTIONS = ["steps", "theories", "words", "limits", "sources"] as const;
+type SectionId = (typeof SECTIONS)[number];
 
 export default function LearnPage({ scenario1, mine }: { scenario1: Inputs; mine: Inputs }) {
+  const { t } = useI18n();
+  const l = t.learn;
   const [section, setSection] = useState<SectionId>("steps");
 
   return (
     <div className="page learn">
       <section className="hero">
-        <h1>How it works</h1>
-        <p className="lead">The four International Financial Management ideas behind every answer, explained one step at a time.</p>
+        <h1>{l.heroTitle}</h1>
+        <p className="lead">{l.heroLead}</p>
       </section>
 
       <div className="pills" role="tablist">
-        {SECTIONS.map((s) => (
-          <button key={s.id} role="tab" aria-selected={section === s.id}
-            className={section === s.id ? "pill-btn active" : "pill-btn"} onClick={() => setSection(s.id)}>{s.label}</button>
+        {SECTIONS.map((id) => (
+          <button key={id} role="tab" aria-selected={section === id}
+            className={section === id ? "pill-btn active" : "pill-btn"} onClick={() => setSection(id)}>{l.sections[id]}</button>
         ))}
       </div>
 
@@ -57,30 +42,25 @@ export default function LearnPage({ scenario1, mine }: { scenario1: Inputs; mine
       {section === "theories" && (
         <>
           <div className="grid-2">
-            {FORMULAS.map(([name, tex, meaning]) => (
-              <div className="card theory" key={name}>
+            {l.formulas.map(([name, meaning], i) => (
+              <div className="card theory" key={i}>
                 <strong>{name}</strong>
-                <Tex expr={tex} />
+                <Tex expr={TEX[i]} />
                 <p className="muted">{meaning}</p>
               </div>
             ))}
           </div>
           <div className="card">
-            <h3>How the answer is decided</h3>
-            <ul>
-              <li><strong>Convert later:</strong> keep ringgit earning Malaysian interest, convert when you leave at the PPP-expected rate.</li>
-              <li><strong>Convert now:</strong> buy just enough foreign currency today and let it earn interest abroad.</li>
-              <li>We compare both in today's money. Within 0.5% of each other, the answer is <strong>Either</strong>.</li>
-              <li><strong>Rule of thumb:</strong> whichever currency gives the higher real interest rate (Fisher) wins.</li>
-            </ul>
+            <h3>{l.decideTitle}</h3>
+            <ul>{l.decide.map((d, i) => <li key={i}>{d}</li>)}</ul>
           </div>
         </>
       )}
 
       {section === "words" && (
         <div className="glossary">
-          {GLOSSARY.map(([t, m]) => (
-            <div className="card term" key={t}><strong>{t}</strong><p className="muted">{m}</p></div>
+          {l.glossary.map(([term, meaning]) => (
+            <div className="card term" key={term}><strong>{term}</strong><p className="muted">{meaning}</p></div>
           ))}
         </div>
       )}
@@ -88,23 +68,12 @@ export default function LearnPage({ scenario1, mine }: { scenario1: Inputs; mine
       {section === "limits" && (
         <div className="grid-2">
           <div className="card">
-            <h3>What we assume</h3>
-            <ul>
-              <li>Rates and inflation stay constant until departure.</li>
-              <li>PPP holds on average over the horizon.</li>
-              <li>Interest is compounded once a year; no taxes.</li>
-              <li>No bank fees, FX spreads or transfer costs.</li>
-              <li>The whole budget is converted in one go.</li>
-            </ul>
+            <h3>{l.assumeTitle}</h3>
+            <ul>{l.assume.map((a) => <li key={a}>{a}</li>)}</ul>
           </div>
           <div className="card">
-            <h3>What to keep in mind</h3>
-            <ul>
-              <li>PPP and IFE often fail in the short run; real exchange rates are volatile.</li>
-              <li>All rates in this app are illustrative, not market data.</li>
-              <li>Students may not access foreign savings accounts or forward contracts in practice.</li>
-              <li>This is a learning tool, not financial advice.</li>
-            </ul>
+            <h3>{l.limitsTitle}</h3>
+            <ul>{l.limits.map((a) => <li key={a}>{a}</li>)}</ul>
           </div>
         </div>
       )}
@@ -112,18 +81,17 @@ export default function LearnPage({ scenario1, mine }: { scenario1: Inputs; mine
       {section === "sources" && (
         <div className="grid-2">
           <div className="card">
-            <h3>References</h3>
+            <h3>{l.refsTitle}</h3>
             <ul>
-              <li>Madura, J. <em>International Financial Management</em>. Cengage Learning (course textbook).</li>
-              <li>Bank Negara Malaysia. Interest rate and exchange rate statistics. <a href="https://www.bnm.gov.my" target="_blank" rel="noreferrer">bnm.gov.my</a></li>
-              <li>Department of Statistics Malaysia. Consumer Price Index releases. <a href="https://www.dosm.gov.my" target="_blank" rel="noreferrer">dosm.gov.my</a></li>
-              <li>International Monetary Fund. World Economic Outlook database. <a href="https://www.imf.org" target="_blank" rel="noreferrer">imf.org</a></li>
+              <li>Madura, J. <em>International Financial Management</em>. Cengage Learning {l.refTextbook}.</li>
+              <li>Bank Negara Malaysia. {l.refBnm} <a href="https://www.bnm.gov.my" target="_blank" rel="noreferrer">bnm.gov.my</a></li>
+              <li>Department of Statistics Malaysia. {l.refDosm} <a href="https://www.dosm.gov.my" target="_blank" rel="noreferrer">dosm.gov.my</a></li>
+              <li>International Monetary Fund. {l.refImf} <a href="https://www.imf.org" target="_blank" rel="noreferrer">imf.org</a></li>
             </ul>
           </div>
           <div className="card">
-            <h3>AI-use disclosure</h3>
-            <p className="muted">[Placeholder: describe how your group used AI tools in building this project, for example
-              code assistance and the Gemini-powered coach, and how outputs were checked against finance.py.]</p>
+            <h3>{l.aiTitle}</h3>
+            <p className="muted">{l.aiText}</p>
           </div>
         </div>
       )}

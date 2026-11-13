@@ -2,19 +2,12 @@ import { Fragment, useEffect, useRef, useState, type ReactNode } from "react";
 
 import { api, ApiError, type ChatMessage, type Health, type Inputs, type Result, type Sensitivity } from "../api";
 import { Disclosure, PlanChip, ResultsTable, SensitivityView } from "../components/common";
-import { shortVerdict } from "../format";
+import { useI18n, verdictKey } from "../i18n";
 
 interface UiMessage extends ChatMessage {
   tables?: Sensitivity[];
   error?: boolean;
 }
-
-const SUGGESTED = [
-  "Should I convert now or later?",
-  "Explain PPP with my numbers",
-  "Is my saving growing in real terms?",
-  "What if Malaysian inflation rises to 4%?",
-];
 
 // Minimal, safe Markdown: paragraphs, "-"/"*" bullets and **bold**. No raw HTML.
 function inline(text: string): ReactNode[] {
@@ -45,6 +38,8 @@ function Markdown({ text }: { text: string }) {
 }
 
 export default function CoachPage({ inputs, result }: { inputs: Inputs; result: Result }) {
+  const { t, lang } = useI18n();
+  const c = t.coach;
   const [health, setHealth] = useState<Health | null>(null);
   const [messages, setMessages] = useState<UiMessage[]>([]);
   const [draft, setDraft] = useState("");
@@ -65,16 +60,10 @@ export default function CoachPage({ inputs, result }: { inputs: Inputs; result: 
     setBusy(true);
     try {
       const history = next.filter((m) => !m.error).map(({ role, content }) => ({ role, content }));
-      const res = await api.chat(inputs, history);
-      setMessages([...next, {
-        role: "assistant",
-        content: res.reply || "Sorry, I had nothing to add. Try rephrasing your question.",
-        tables: res.tool_results,
-      }]);
+      const res = await api.chat(inputs, history, lang);
+      setMessages([...next, { role: "assistant", content: res.reply || c.noReply, tables: res.tool_results }]);
     } catch (e) {
-      const msg = e instanceof ApiError && e.status === 503
-        ? "The AI Coach is offline (no API key on the server). The other pages still work."
-        : "Sorry, I could not reach the AI service just now. Please try again in a moment.";
+      const msg = e instanceof ApiError && e.status === 503 ? c.errOffline : c.errReach;
       setMessages([...next, { role: "assistant", content: msg, error: true }]);
     } finally {
       setBusy(false);
@@ -84,31 +73,29 @@ export default function CoachPage({ inputs, result }: { inputs: Inputs; result: 
   return (
     <div className="page coach">
       <section className="hero">
-        <h1>Ask the coach</h1>
-        <p className="lead">Confused by a number? Ask in your own words. The coach explains your plan using only the numbers our engine calculated.</p>
+        <h1>{c.heroTitle}</h1>
+        <p className="lead">{c.heroLead}</p>
       </section>
 
       <PlanChip inputs={inputs} />
 
-      {health && !online && (
-        <div className="alert alert-warn">The coach is offline because the server has no Gemini API key.
-          Everything else still works. Set <code>GEMINI_API_KEY</code> on the backend and restart it.</div>
-      )}
-      {!health && <div className="alert alert-warn">Cannot reach the backend. Start it with <code>uvicorn backend.main:app</code>.</div>}
+      {health && !online && <div className="alert alert-warn">{c.offline()}</div>}
+      {!health && <div className="alert alert-warn">{c.noBackend()}</div>}
 
       <section className="card chat">
         <div className="chat-head">
           <span className="coach-id"><span className="avatar-lg" aria-hidden>🤖</span>
-            <span><strong>Ringgit Coach</strong><small>{online ? `Online · Gemini (${health?.model})` : "Offline"}</small></span>
+            <span><strong>{t.appName}</strong><small>{online ? c.online(health?.model ?? "") : c.offlineShort}</small></span>
           </span>
-          <button className="btn btn-ghost" disabled={!messages.length || busy} onClick={() => setMessages([])}>Clear chat</button>
+          <button className="btn btn-ghost" disabled={!messages.length || busy} onClick={() => setMessages([])}>{c.clear}</button>
         </div>
 
         <div className="messages" aria-live="polite">
           {!messages.length && (
             <div className="empty">
-              <p><strong>Hi! I'm your study-abroad money coach.</strong></p>
-              <p className="muted">Pick a question below to start. I'll name the theory behind each answer (PPP, IRP, Fisher or IFE).</p>
+              <p><strong>{c.greeting}</strong></p>
+              <p className="muted">{c.greetingSub}</p>
+              {c.languageNote && <p className="small muted">{c.languageNote}</p>}
             </div>
           )}
           {messages.map((m, i) => (
@@ -116,7 +103,8 @@ export default function CoachPage({ inputs, result }: { inputs: Inputs; result: 
               {m.role === "assistant" && <div className="avatar" aria-hidden>🤖</div>}
               <div className="bubble">
                 {m.tables?.map((s, j) => (
-                  <Disclosure key={j} title="What-if the engine ran" hint={`${shortVerdict(s.before.verdict)} → ${shortVerdict(s.after.verdict)}`}>
+                  <Disclosure key={j} title={c.whatIfRan}
+                    hint={`${t.verdict[verdictKey(s.before.verdict)]} → ${t.verdict[verdictKey(s.after.verdict)]}`}>
                     <SensitivityView s={s} cur={inputs.currency} explain={false} />
                   </Disclosure>
                 ))}
@@ -124,27 +112,32 @@ export default function CoachPage({ inputs, result }: { inputs: Inputs; result: 
               </div>
             </div>
           ))}
-          {busy && <div className="msg msg-assistant"><div className="avatar" aria-hidden>🤖</div><div className="bubble typing"><span className="dots"><i /><i /><i /></span> Checking the numbers</div></div>}
+          {busy && (
+            <div className="msg msg-assistant">
+              <div className="avatar" aria-hidden>🤖</div>
+              <div className="bubble typing"><span className="dots"><i /><i /><i /></span> {c.typing}</div>
+            </div>
+          )}
           <div ref={bottom} />
         </div>
 
         <div className="chips">
-          {SUGGESTED.map((q) => (
+          {c.suggested.map((q) => (
             <button key={q} className="chip" disabled={!online || busy} onClick={() => ask(q)}>{q}</button>
           ))}
         </div>
 
         <form className="composer" onSubmit={(e) => { e.preventDefault(); ask(draft); }}>
           <input value={draft} onChange={(e) => setDraft(e.target.value)} disabled={!online || busy}
-            placeholder="Ask anything about your plan..." maxLength={1000} aria-label="Your question" />
-          <button className="btn" type="submit" disabled={!online || busy || !draft.trim()}>Send</button>
+            placeholder={c.placeholder} maxLength={1000} aria-label={c.yourQuestion} />
+          <button className="btn" type="submit" disabled={!online || busy || !draft.trim()}>{c.send}</button>
         </form>
       </section>
 
-      <Disclosure title="Numbers the coach can see" hint="Every answer must match these">
+      <Disclosure title={c.numbersTitle} hint={c.numbersHint}>
         <ResultsTable r={result} compact />
       </Disclosure>
-      <p className="caption center">A learning tool, not a licensed financial advisor.</p>
+      <p className="caption center">{c.notAdvisor}</p>
     </div>
   );
 }

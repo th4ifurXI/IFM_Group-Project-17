@@ -138,3 +138,31 @@ def test_ask_coach_runs_tool_in_python_and_returns_result():
     # second request carried the function response back to the model
     last = fake.models.calls[1][-1]
     assert last.parts[0].function_response.name == "run_sensitivity"
+
+
+def test_malay_instruction_added_only_when_asked():
+    r = finance.compute(SCENARIO_1)
+    en = coach.build_system_instruction(SCENARIO_1, r)
+    ms = coach.build_system_instruction(SCENARIO_1, r, "ms")
+    assert "Bahasa Melayu" not in en
+    assert "Bahasa Melayu" in ms and "Pariti Kuasa Beli (PPP)" in ms
+    # Grounding data is identical in both languages
+    assert en.split("PLAN DATA (from finance.py):")[1] == ms.split("PLAN DATA (from finance.py):")[1]
+
+
+def test_polish_reply_fixes_format_without_touching_numbers():
+    en = coach.polish_reply("Saving moved from RM-10.83 to RM2,241.60 (Fisher Effect).")
+    assert en == "Saving moved from -RM10.83 to RM2,241.60 (Fisher Effect)."
+    ms = coach.polish_reply(
+        "Purchasing Power Parity (PPP) dan International Fisher Effect (IFE); Fisher Effect: "
+        'RM-10.83 kepada RM2,241.60. Cadangan: "Convert now".', "ms")
+    assert "Pariti Kuasa Beli (PPP)" in ms
+    assert "Kesan Fisher Antarabangsa (IFE)" in ms
+    assert "Kesan Fisher:" in ms
+    assert "-RM10.83" in ms and "RM2,241.60" in ms
+    assert "Tukar sekarang" in ms and "Convert now" not in ms
+
+
+def test_malay_rule_is_placed_first():
+    text = coach.build_system_instruction(SCENARIO_1, finance.compute(SCENARIO_1), "ms")
+    assert text.startswith("LANGUAGE: Reply ONLY in Bahasa Melayu")
