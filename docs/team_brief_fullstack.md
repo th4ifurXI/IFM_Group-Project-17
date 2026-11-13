@@ -40,7 +40,7 @@ finance.py, coach.py, scenarios.py      unchanged, shared with the Streamlit app
 | `backend/schemas.py` | request validation (Pydantic) | done |
 | `backend/requirements.txt` | backend dependencies | done |
 | `tests/test_api.py` | API tests, including Scenario 1 to 4 checks | done |
-| `frontend/` | React website | to do |
+| `frontend/` | React + TypeScript website (Vite), all five pages | done, first version |
 
 ## Backend API (done)
 
@@ -66,9 +66,9 @@ Run from the repo root: `uvicorn backend.main:app --reload`, then open http://lo
 
 **Environment variables:** `GEMINI_API_KEY`, `GEMINI_MODEL` (default `gemini-3.6-flash`), `ALLOWED_ORIGINS` (comma-separated frontend URLs; default allows `http://localhost:5173` and `http://localhost:3000`).
 
-## Frontend (to do)
+## Frontend (first version done)
 
-**Stack:** React + TypeScript with Vite, `react-plotly.js` for charts, KaTeX for formulas, plain CSS or Tailwind. The frontend never calculates finance numbers; it only formats what the API returns.
+**Stack:** React + TypeScript with Vite, Plotly (`plotly.js-basic-dist-min`) for charts, KaTeX for formulas, plain CSS. Run with `npm install` then `npm run dev` inside `frontend/`; `/api` is proxied to the backend on port 8000. The frontend never calculates finance numbers; it only formats what the API returns.
 
 **Pages (same five as the Streamlit app):**
 
@@ -102,10 +102,10 @@ Free backends sleep when idle. Open the site a few minutes before any demo.
 ## Work order
 
 1. Backend API and tests (done on `fullstack`).
-2. Frontend scaffold: Vite + React + TypeScript, API client, number formatting helpers.
-3. Plan page, then Sensitivity, then Guided mode.
-4. AI Coach page.
-5. Learn page.
+2. Frontend scaffold, API client and formatting helpers (done).
+3. Plan, Sensitivity and Guided mode pages (done).
+4. AI Coach page (done, tested with a real Gemini call).
+5. Learn page (done).
 6. Deploy backend, then frontend, and run the acceptance checks against the live URLs.
 7. Merge into `main` only after the submission deadline, or once it fully matches the Streamlit app.
 
