@@ -74,6 +74,8 @@ Run from the repo root: `uvicorn backend.main:app --reload`, then open http://lo
 
 **Language (EN / BM):** an EN / BM switch in the top bar changes every page between English and Bahasa Melayu (text lives in `frontend/src/i18n.tsx`; the choice is remembered in the browser). The AI Coach replies in the chosen language: the frontend sends `language: "ms"` to `/api/chat`, `coach.py` puts a Malay rule first in the system instruction, and `coach.polish_reply` swaps any leftover English theory names for the Malay ones (Pariti Kuasa Beli, Pariti Kadar Faedah, Kesan Fisher, Kesan Fisher Antarabangsa). Numbers and formulas are identical in both languages. A native Malay speaker in the team should proofread the BM text before any demo.
 
+**Quiz:** a fifth section, Quiz, tests understanding with 9 questions in English or Bahasa Melayu: 6 concept questions (PPP, IRP, Fisher, IFE) using numbers from the verified scenario table, and 3 questions on the student's own plan whose answer options are all finance-engine outputs. Each answer shows instant feedback and an explanation naming the theory; the score screen reviews every answer. Question text lives in `frontend/src/quiz.ts`.
+
 **Original page spec (all features kept):**
 
 1. **Plan:** input panel (destination, cost, months 1 to 36, spot, Malaysia and foreign interest rates, Malaysia and foreign inflation as percent sliders converted to decimals before sending). Shows three key figures, a verdict card (Convert now, Convert later or Either), a cost-over-time chart from `cost_path`, a present-value bar chart (now, later, forward) and the full results table.

@@ -6,6 +6,7 @@ import { useI18n } from "./i18n";
 import CoachPage from "./pages/CoachPage";
 import LearnPage from "./pages/LearnPage";
 import PlanPage from "./pages/PlanPage";
+import QuizPage from "./pages/QuizPage";
 import WhatIfPage from "./pages/WhatIfPage";
 
 const TABS = [
@@ -13,6 +14,7 @@ const TABS = [
   { id: "whatif", icon: "🔀" },
   { id: "coach", icon: "🤖" },
   { id: "learn", icon: "📚" },
+  { id: "quiz", icon: "🧠" },
 ] as const;
 type TabId = (typeof TABS)[number]["id"];
 
@@ -89,6 +91,7 @@ export default function App() {
             {/* Kept mounted so the conversation survives switching sections. */}
             <div hidden={tab !== "coach"}><CoachPage inputs={inputs} result={data.result} /></div>
             {tab === "learn" && <LearnPage scenario1={presets.destinations.GBP.inputs} mine={inputs} />}
+            {tab === "quiz" && <QuizPage inputs={inputs} result={data.result} />}
           </>
         )}
 
