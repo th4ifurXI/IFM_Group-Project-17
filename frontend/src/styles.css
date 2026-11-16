@@ -424,3 +424,6 @@ input[type="range"] { accent-color: var(--primary); width: 100%; margin: 0.4rem 
 /* five sections in the menus */
 @media (max-width: 760px) { .nav-bottom { grid-template-columns: repeat(5, 1fr); } .nav-bottom a { font-size: 0.66rem; } }
 @media (max-width: 1080px) and (min-width: 761px) { .brand small { display: none; } .nav-top a { padding: 0.5rem 0.6rem; } }
+.quiz-option:disabled { cursor: not-allowed; }
+.quiz-actions { align-items: center; }
+.quiz-hint { margin-right: auto; }

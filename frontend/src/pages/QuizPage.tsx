@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 
 import type { Inputs, Result } from "../api";
 import { PlanChip } from "../components/common";
@@ -30,9 +30,13 @@ export default function QuizPage({ inputs, result }: { inputs: Inputs; result: R
   const picked = answers[index];
   const score = answers.filter((a, i) => a === questions[i].answer).length;
 
+  const actionsRef = useRef<HTMLDivElement>(null);
+
   function choose(option: number) {
     if (picked !== null) return; // one try per question
     setAnswers((prev) => prev.map((a, i) => (i === index ? option : a)));
+    // Bring the feedback and the Next button into view on small screens.
+    setTimeout(() => actionsRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" }), 50);
   }
 
   function next() {
@@ -123,7 +127,10 @@ export default function QuizPage({ inputs, result }: { inputs: Inputs; result: R
           </div>
         )}
 
-        <div className="quiz-actions">
+        <div className="quiz-actions" ref={actionsRef}>
+          {picked === null
+            ? <span className="small muted quiz-hint">{q.pickHint}</span>
+            : <span className="small muted quiz-hint">{q.lockedHint}</span>}
           <button className="btn" onClick={next} disabled={picked === null}>
             {index + 1 < total ? q.next : q.finish}
           </button>
