@@ -64,7 +64,7 @@ Run from the repo root: `uvicorn backend.main:app --reload`, then open http://lo
 - The Gemini key lives only on the backend as an environment variable. It is never sent to the browser or committed.
 - The frontend sends at most the last 10 chat messages; the backend accepts up to 50 and `coach.py` trims to 10.
 
-**Environment variables:** `GEMINI_API_KEY`, `GEMINI_MODEL` (default `gemini-3.6-flash`), `ALLOWED_ORIGINS` (comma-separated frontend URLs; default allows `http://localhost:5173` and `http://localhost:3000`).
+**Environment variables:** `GEMINI_API_KEY`, `GEMINI_MODEL` (default `gemini-3.8-flash`), `ALLOWED_ORIGINS` (comma-separated frontend URLs; default allows `http://localhost:5173` and `http://localhost:3000`).
 
 ## Frontend (first version done)
 

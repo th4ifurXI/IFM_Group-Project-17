@@ -87,7 +87,7 @@ The app works without an API key; only the AI Coach tab is disabled.
 3. Paste your key:
    ```toml
    GEMINI_API_KEY = "your-key"
-   GEMINI_MODEL = "gemini-3.6-flash"
+   GEMINI_MODEL = "gemini-3.8-flash"
    ```
 4. Restart `streamlit run app.py`.
 
@@ -128,7 +128,7 @@ The backend reads `GEMINI_API_KEY` from an environment variable, not from `.stre
 4. Open **Advanced settings**, pick Python 3.12 and paste into **Secrets**:
    ```toml
    GEMINI_API_KEY = "your-key"
-   GEMINI_MODEL = "gemini-3.6-flash"
+   GEMINI_MODEL = "gemini-3.8-flash"
    ```
 5. Click **Deploy**. Secrets can be edited later under the app's **Settings > Secrets**.
 

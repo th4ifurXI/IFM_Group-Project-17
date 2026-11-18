@@ -20,7 +20,7 @@ from typing import Any
 import finance
 from finance import Inputs
 
-DEFAULT_MODEL = "gemini-3.6-flash"
+DEFAULT_MODEL = "gemini-3.8-flash"
 MAX_HISTORY = 10          # messages sent to Gemini each turn
 MAX_TOOL_ROUNDS = 3       # safety cap on function-calling loops
 
