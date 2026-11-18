@@ -166,3 +166,111 @@ def test_polish_reply_fixes_format_without_touching_numbers():
 def test_malay_rule_is_placed_first():
     text = coach.build_system_instruction(SCENARIO_1, finance.compute(SCENARIO_1), "ms")
     assert text.startswith("LANGUAGE: Reply ONLY in Bahasa Melayu")
+
+
+# ---------- busy-model retry and Claude backup ----------
+
+class BusyError(Exception):
+    code = 503
+
+
+class BusyThenOkModels:
+    """The first model is always busy; any other model answers."""
+
+    def __init__(self):
+        self.models_tried = []
+
+    def generate_content(self, model, contents, config):
+        self.models_tried.append(model)
+        if model == "busy-model":
+            raise BusyError("high demand")
+        return SimpleNamespace(function_calls=None, text="Either works.", candidates=[])
+
+
+def test_gemini_retries_then_switches_to_backup_model(monkeypatch):
+    monkeypatch.setattr("time.sleep", lambda s: None)
+    monkeypatch.setattr(coach, "FALLBACK_MODELS", ("busy-model", "good-model"))
+    fake = SimpleNamespace(models=BusyThenOkModels())
+    reply = coach.ask_coach([{"role": "user", "content": "now or later?"}],
+                            SCENARIO_1, finance.compute(SCENARIO_1),
+                            client=fake, model="busy-model")
+    assert reply.text == "Either works." and reply.model == "good-model"
+    assert fake.models.models_tried == ["busy-model"] * coach.RETRIES_PER_MODEL + ["good-model"]
+
+
+def test_gemini_does_not_retry_a_bad_request():
+    class BadRequest(Exception):
+        code = 400
+
+    class Models:
+        calls = 0
+
+        def generate_content(self, model, contents, config):
+            Models.calls += 1
+            raise BadRequest("bad key")
+
+    with pytest.raises(BadRequest):
+        coach.ask_coach([{"role": "user", "content": "hi"}], SCENARIO_1,
+                        finance.compute(SCENARIO_1),
+                        client=SimpleNamespace(models=Models()), model="m")
+    assert Models.calls == 1
+
+
+class FakeClaudeMessages:
+    """First reply calls run_sensitivity, second reply is plain text."""
+
+    def __init__(self):
+        self.requests = []
+
+    def create(self, **kwargs):
+        self.requests.append(kwargs)
+        if len(self.requests) == 1:
+            call = SimpleNamespace(type="tool_use", id="tool_1", name="run_sensitivity",
+                                   input={"field": "pi_my", "new_value": 0.04})
+            return SimpleNamespace(stop_reason="tool_use", content=[call],
+                                   model="claude-opus-5-5")
+        return SimpleNamespace(stop_reason="end_turn", model="claude-opus-5-5",
+                               content=[SimpleNamespace(type="text", text="Convert now (PPP).")])
+
+
+def fake_claude():
+    return SimpleNamespace(beta=SimpleNamespace(messages=FakeClaudeMessages()))
+
+
+def test_ask_claude_runs_tool_in_python_and_returns_result():
+    client = fake_claude()
+    reply = coach.ask_claude([{"role": "user", "content": "What if inflation is 4%?"}],
+                             SCENARIO_1, finance.compute(SCENARIO_1), client=client)
+    assert reply.text == "Convert now (PPP)." and reply.model == "claude-opus-5-5"
+    assert reply.tool_results == [finance.sensitivity(SCENARIO_1, "pi_my", 0.04)]
+    reqs = client.beta.messages.requests
+    assert reqs[0]["tools"][0]["input_schema"]["required"] == ["field", "new_value"]
+    assert "PLAN DATA (from finance.py):" in reqs[0]["system"]      # grounded
+    result_block = reqs[1]["messages"][-1]["content"][0]
+    assert result_block["type"] == "tool_result" and result_block["tool_use_id"] == "tool_1"
+
+
+def test_claude_history_starts_with_user():
+    msgs = [{"role": "assistant", "content": "Hi!"}, {"role": "user", "content": "q"}]
+    assert coach.build_claude_messages(msgs) == [{"role": "user", "content": "q"}]
+
+
+def test_backup_uses_claude_when_gemini_fails(monkeypatch):
+    def gemini_down(*a, **k):
+        raise BusyError("high demand")
+
+    monkeypatch.setattr(coach, "ask_coach", gemini_down)
+    reply = coach.ask_with_backup([{"role": "user", "content": "What if inflation is 4%?"}],
+                                  SCENARIO_1, finance.compute(SCENARIO_1),
+                                  gemini=(object(), "g"), claude=(fake_claude(), None))
+    assert reply.text == "Convert now (PPP)."
+
+
+def test_backup_raises_when_gemini_fails_and_no_claude(monkeypatch):
+    def gemini_down(*a, **k):
+        raise BusyError("high demand")
+
+    monkeypatch.setattr(coach, "ask_coach", gemini_down)
+    with pytest.raises(BusyError):
+        coach.ask_with_backup([{"role": "user", "content": "hi"}], SCENARIO_1,
+                              finance.compute(SCENARIO_1), gemini=(object(), "g"))

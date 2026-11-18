@@ -18,6 +18,7 @@ S1 = InputsModel.from_inputs(SCENARIO_1).model_dump()
 @pytest.fixture
 def no_key(monkeypatch):
     monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
 
 
 def test_health(no_key):
@@ -137,3 +138,31 @@ def test_chat_passes_language_to_coach(monkeypatch):
     bad = client.post("/api/chat", json={
         "inputs": S1, "language": "fr", "messages": [{"role": "user", "content": "hi"}]})
     assert bad.status_code == 422
+
+
+def test_health_reports_claude_backup(monkeypatch):
+    monkeypatch.setenv("GEMINI_API_KEY", "g-key")
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "c-key")
+    body = client.get("/api/health").json()
+    assert body["coach_available"] is True
+    assert body["backup"] == coach.DEFAULT_CLAUDE_MODEL
+
+
+def test_chat_falls_back_to_claude_when_gemini_fails(monkeypatch):
+    monkeypatch.setenv("GEMINI_API_KEY", "g-key")
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "c-key")
+    monkeypatch.setattr(coach, "make_client", lambda key: object())
+    monkeypatch.setattr(coach, "make_claude_client", lambda key: object())
+
+    def gemini_down(*a, **k):
+        raise RuntimeError("503 high demand")
+
+    def claude_ok(messages, inputs, result, client=None, model=None, language="en"):
+        return coach.CoachReply(text="From Claude.", model="claude-opus-5-5")
+
+    monkeypatch.setattr(coach, "ask_coach", gemini_down)
+    monkeypatch.setattr(coach, "ask_claude", claude_ok)
+    r = client.post("/api/chat", json={
+        "inputs": S1, "messages": [{"role": "user", "content": "hi"}]})
+    assert r.status_code == 200
+    assert r.json() == {"reply": "From Claude.", "tool_results": [], "model": "claude-opus-5-5"}

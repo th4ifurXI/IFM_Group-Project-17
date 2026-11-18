@@ -57,3 +57,4 @@ class ChatRequest(BaseModel):
 class ChatResponse(BaseModel):
     reply: str
     tool_results: list[dict]
+    model: str | None = None   # which AI model answered (Gemini or the Claude backup)

@@ -77,6 +77,7 @@ export interface Health {
   status: string;
   coach_available: boolean;
   model: string;
+  backup?: string | null;   // Claude model used when Gemini fails
 }
 
 export interface ChatMessage {
@@ -86,6 +87,7 @@ export interface ChatMessage {
 
 export interface ChatResponse {
   reply: string;
+  model?: string | null;    // which model answered
   tool_results: Sensitivity[];
 }
 

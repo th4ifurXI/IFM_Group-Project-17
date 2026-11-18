@@ -60,11 +60,11 @@ Run from the repo root: `uvicorn backend.main:app --reload`, then open http://lo
 
 **Rules:**
 - Validation: months 1 to 36, spot and cost above 0, rates between -5% and 50%. Bad input returns HTTP 422.
-- `/api/chat` returns 503 when there is no `GEMINI_API_KEY`, and 502 when Gemini fails. The frontend shows a friendly message and every other page keeps working.
+- `/api/chat` returns 503 when there is no AI key at all, and 502 when the AI service fails. A busy Gemini model is retried, then the other Gemini model is tried, then Claude if `ANTHROPIC_API_KEY` is set. The frontend shows a friendly message and every other page keeps working.
 - The Gemini key lives only on the backend as an environment variable. It is never sent to the browser or committed.
 - The frontend sends at most the last 10 chat messages; the backend accepts up to 50 and `coach.py` trims to 10.
 
-**Environment variables:** `GEMINI_API_KEY`, `GEMINI_MODEL` (default `gemini-3.8-flash`), `ALLOWED_ORIGINS` (comma-separated frontend URLs; default allows `http://localhost:5173` and `http://localhost:3000`).
+**Environment variables:** `GEMINI_API_KEY`, `GEMINI_MODEL` (default `gemini-3.8-flash`), optional Claude backup `ANTHROPIC_API_KEY` and `ANTHROPIC_MODEL` (default `claude-opus-5-5`), `ALLOWED_ORIGINS` (comma-separated frontend URLs; default allows `http://localhost:5173` and `http://localhost:3000`).
 
 ## Frontend (first version done)
 

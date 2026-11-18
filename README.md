@@ -118,7 +118,9 @@ npm run dev
 
 Open http://localhost:5173. In development the frontend forwards `/api` calls to the backend on port 8000. API docs: http://localhost:8000/docs.
 
-The backend reads `GEMINI_API_KEY` from an environment variable, not from `.streamlit/secrets.toml`. In PowerShell: `$env:GEMINI_API_KEY="your-key"` before starting uvicorn.
+The backend reads `GEMINI_API_KEY` from an environment variable, not from `.streamlit/secrets.toml`. In PowerShell: `$env:GEMINI_API_KEY="your-key"` before starting uvicorn (in Command Prompt: `set GEMINI_API_KEY=your-key`).
+
+**When Gemini is busy.** The coach retries a busy Gemini model, then tries the other Gemini model. If you also set `ANTHROPIC_API_KEY` (a key from platform.claude.com, which needs prepaid credit), the backend answers with Claude (`claude-opus-5-5` by default, change it with `ANTHROPIC_MODEL`) when every Gemini model fails. Claude follows the same rule: it only explains numbers from `finance.py` and uses the same `run_sensitivity` tool. The coach header shows "Claude backup" when this is switched on.
 
 ## Deploy to Streamlit Community Cloud
 

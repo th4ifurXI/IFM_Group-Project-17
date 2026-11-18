@@ -2,3 +2,4 @@ streamlit>=1.40
 plotly>=5.20
 google-genai>=1.0
 pytest>=8.0
+anthropic>=2.0

@@ -7,6 +7,9 @@ export type Lang = "en" | "ms";
 type V = "now" | "later" | "either";
 type FieldKey = "pi_my" | "pi_f" | "i_my" | "i_f" | "spot" | "months" | "cost_foreign";
 
+// "gemini-3.8-flash" -> "Gemini (gemini-3.8-flash)", "claude-opus-5-5" -> "Claude (claude-opus-5-5)"
+const aiName = (model: string) => `${model.startsWith("claude") ? "Claude" : "Gemini"} (${model})`;
+
 const en = {
   langName: "English",
   appName: "Ringgit Coach",
@@ -168,9 +171,10 @@ const en = {
   coach: {
     heroTitle: "Ask the coach",
     heroLead: "Confused by a number? Ask in your own words. The coach explains your plan using only the numbers our engine calculated.",
-    offline: (): ReactNode => <>The coach is offline because the server has no Gemini API key. Everything else still works. Set <code>GEMINI_API_KEY</code> on the backend and restart it.</>,
+    offline: (): ReactNode => <>The coach is offline because the server has no AI key. Everything else still works. Set <code>GEMINI_API_KEY</code> (or <code>ANTHROPIC_API_KEY</code>) on the backend and restart it.</>,
     noBackend: (): ReactNode => <>Cannot reach the backend. Start it with <code>uvicorn backend.main:app</code>.</>,
-    online: (model: string) => `Online · Gemini (${model})`,
+    online: (model: string, backup?: string | null) =>
+      `Online · ${aiName(model)}${backup ? ` · Claude backup` : ""}`,
     offlineShort: "Offline",
     clear: "Clear chat",
     greeting: "Hi! I'm your study-abroad money coach.",
@@ -463,9 +467,10 @@ const ms: Dict = {
   coach: {
     heroTitle: "Tanya jurulatih",
     heroLead: "Keliru dengan sesuatu angka? Tanya dengan perkataan anda sendiri. Jurulatih menerangkan pelan anda menggunakan hanya angka yang dikira oleh enjin kami.",
-    offline: () => <>Jurulatih tidak dalam talian kerana pelayan tiada kunci API Gemini. Bahagian lain masih berfungsi. Tetapkan <code>GEMINI_API_KEY</code> pada backend dan mulakan semula.</>,
+    offline: () => <>Jurulatih tidak dalam talian kerana pelayan tiada kunci AI. Bahagian lain masih berfungsi. Tetapkan <code>GEMINI_API_KEY</code> (atau <code>ANTHROPIC_API_KEY</code>) pada backend dan mulakan semula.</>,
     noBackend: () => <>Tidak dapat menghubungi backend. Mulakan dengan <code>uvicorn backend.main:app</code>.</>,
-    online: (model) => `Dalam talian · Gemini (${model})`,
+    online: (model, backup) =>
+      `Dalam talian · ${aiName(model)}${backup ? ` · sandaran Claude` : ""}`,
     offlineShort: "Luar talian",
     clear: "Kosongkan sembang",
     greeting: "Hai! Saya jurulatih kewangan belajar di luar negara anda.",

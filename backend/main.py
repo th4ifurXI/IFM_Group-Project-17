@@ -10,13 +10,16 @@ This is a thin HTTP layer. Every number still comes from finance.py and the
 AI Coach still goes through coach.py, exactly as in the Streamlit app.
 
 Environment variables:
-    GEMINI_API_KEY   required for /api/chat only
-    GEMINI_MODEL     optional, defaults to coach.DEFAULT_MODEL
+    GEMINI_API_KEY     the AI Coach's main provider (/api/chat only)
+    GEMINI_MODEL       optional, defaults to coach.DEFAULT_MODEL
+    ANTHROPIC_API_KEY  optional Claude backup, used when Gemini fails
+    ANTHROPIC_MODEL    optional, defaults to coach.DEFAULT_CLAUDE_MODEL
     ALLOWED_ORIGINS  comma-separated frontend URLs for CORS
 """
 
 from __future__ import annotations
 
+import logging
 import os
 
 from fastapi import FastAPI, HTTPException
@@ -30,6 +33,8 @@ from scenarios import (DESTINATIONS, ILLUSTRATIVE_LABEL, PRESETS, SCENARIO_1,
 
 from .schemas import (ChatRequest, ChatResponse, InputsModel,
                       SensitivityRequest)
+
+log = logging.getLogger("uvicorn.error")
 
 app = FastAPI(
     title="StudyAbroad Ringgit Coach API",
@@ -67,10 +72,18 @@ def _coach_config() -> tuple[str | None, str]:
     return coach.get_config({})
 
 
+def _claude_config() -> tuple[str | None, str]:
+    return coach.get_claude_config({})
+
+
 @app.get("/api/health")
 def health() -> dict:
     api_key, model = _coach_config()
-    return {"status": "ok", "coach_available": bool(api_key), "model": model,
+    claude_key, claude_model = _claude_config()
+    return {"status": "ok",
+            "coach_available": bool(api_key or claude_key),
+            "model": model if api_key else claude_model,
+            "backup": claude_model if (api_key and claude_key) else None,
             "note": ILLUSTRATIVE_LABEL}
 
 
@@ -123,19 +136,24 @@ def scenario(scenario_id: str) -> dict:
 @app.post("/api/chat", response_model=ChatResponse)
 def chat(req: ChatRequest) -> ChatResponse:
     api_key, model = _coach_config()
-    if not api_key:
+    claude_key, claude_model = _claude_config()
+    if not api_key and not claude_key:
         raise HTTPException(status_code=503,
-                            detail="The AI Coach is offline: no GEMINI_API_KEY is set.")
+                            detail="The AI Coach is offline: no GEMINI_API_KEY or "
+                                   "ANTHROPIC_API_KEY is set.")
     if req.messages[-1].role != "user":
         raise HTTPException(status_code=422, detail="The last message must be from the user.")
 
     x = req.inputs.to_inputs()
     result = finance.compute(x)
     try:
-        reply = coach.ask_coach([m.model_dump() for m in req.messages], x, result,
-                                client=coach.make_client(api_key), model=model,
-                                language=req.language)
+        gemini = (coach.make_client(api_key), model) if api_key else None
+        claude = (coach.make_claude_client(claude_key), claude_model) if claude_key else None
+        reply = coach.ask_with_backup([m.model_dump() for m in req.messages], x, result,
+                                      gemini=gemini, claude=claude, language=req.language)
     except Exception as exc:  # network, quota, bad model name
+        log.warning("AI coach failed: %s: %s", type(exc).__name__, str(exc)[:300])
         raise HTTPException(status_code=502,
                             detail=f"Could not reach the AI service ({type(exc).__name__}).") from exc
-    return ChatResponse(reply=reply.text, tool_results=reply.tool_results)
+    return ChatResponse(reply=reply.text, tool_results=reply.tool_results,
+                        model=getattr(reply, "model", None))

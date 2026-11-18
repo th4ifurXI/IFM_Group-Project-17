@@ -85,7 +85,7 @@ export default function CoachPage({ inputs, result }: { inputs: Inputs; result: 
       <section className="card chat">
         <div className="chat-head">
           <span className="coach-id"><span className="avatar-lg" aria-hidden>🤖</span>
-            <span><strong>{t.appName}</strong><small>{online ? c.online(health?.model ?? "") : c.offlineShort}</small></span>
+            <span><strong>{t.appName}</strong><small>{online ? c.online(health?.model ?? "", health?.backup) : c.offlineShort}</small></span>
           </span>
           <button className="btn btn-ghost" disabled={!messages.length || busy} onClick={() => setMessages([])}>{c.clear}</button>
         </div>
